@@ -1,0 +1,68 @@
+import { Review } from './types';
+
+export const mockReviews: Record<string, Review[]> = {
+  'stay-1': [
+    {
+      _id: 'rev-101',
+      listingId: 'stay-1',
+      userId: 'usr-1',
+      userName: 'Pooja Bhattacharya',
+      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      rating: 5,
+      date: 'November 2024',
+      comment: 'An absolute masterpiece of a villa. Hearing the waves hit the cliffs while sitting on the plunge pool terrace was unforgettable. The local chef prepared authentic Goan fish curry for us every evening.',
+      cleanliness: 5,
+      accuracy: 5,
+      communication: 5,
+      locationRating: 5,
+      value: 4.9,
+    },
+    {
+      _id: 'rev-102',
+      listingId: 'stay-1',
+      userId: 'usr-2',
+      userName: 'Julian Vance',
+      userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      rating: 5,
+      date: 'September 2024',
+      comment: 'Wayfound nailed this recommendation. It felt so discreet and serene compared to usual tourist spots. High-speed WiFi worked seamlessly for my remote calls.',
+      cleanliness: 5,
+      accuracy: 5,
+      communication: 5,
+      locationRating: 5,
+      value: 4.8,
+    },
+    {
+      _id: 'rev-103',
+      listingId: 'stay-1',
+      userId: 'usr-3',
+      userName: 'Ananya Sharma',
+      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      rating: 4.9,
+      date: 'August 2024',
+      comment: 'The Portuguese architectural restoration is breathtaking. Meera and Aarav are exceptional hosts who gave us secret beach access tips.',
+      cleanliness: 5,
+      accuracy: 4.9,
+      communication: 5,
+      locationRating: 4.9,
+      value: 4.8,
+    },
+  ],
+  'stay-2': [
+    {
+      _id: 'rev-201',
+      listingId: 'stay-2',
+      userId: 'usr-4',
+      userName: 'Vikram Singhania',
+      userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      rating: 5,
+      date: 'October 2024',
+      comment: 'Waking up to snow peaks right in front of the glass bedroom was surreal. Cedar scent, crackling fireplace, and steaming hot mountain tea. Pure bliss.',
+      cleanliness: 5,
+      accuracy: 5,
+      communication: 5,
+      locationRating: 5,
+      value: 5,
+    }
+  ]
+};

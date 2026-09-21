@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0F0F14" />
+    <title>Wayfound — Find your way to stay.</title>
+    <meta name="description" content="Find your way to stay. Handcrafted cliffside villas, deodar chalets, and royal lakeside retreats across India." />
+    <!-- Pre-check dark mode before paint -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('wayfound-theme');
+          var supportDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (!theme && supportDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground antialiased selection:bg-sunset-coral/20 selection:text-sunset-coral">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
