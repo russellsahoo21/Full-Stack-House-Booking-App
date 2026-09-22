@@ -76,7 +76,7 @@ export const Hero: React.FC = () => {
   return (
     <div
       ref={heroRef}
-      className="relative z-30 w-full h-[100svh] min-h-[680px] flex flex-col justify-between pt-24 pb-8 select-none"
+      className="relative z-40 w-full h-[100svh] min-h-[680px] flex flex-col justify-between pt-24 pb-8 select-none"
     >
       {/* ================= BACKGROUND VIDEO / POSTER FALLBACK ================= */}
       <motion.div

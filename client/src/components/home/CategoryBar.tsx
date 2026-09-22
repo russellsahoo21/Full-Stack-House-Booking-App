@@ -72,7 +72,7 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
   };
 
   return (
-    <div className="sticky top-[68px] z-30 bg-background/90 backdrop-blur-xl border-b border-warm-200/60 dark:border-white/5 py-4 transition-colors">
+    <div className="sticky top-[68px] z-20 bg-background/90 backdrop-blur-xl border-b border-warm-200/60 dark:border-white/5 py-4 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-4">
         {/* Horizontal Category Scroll Area with Fade Edges */}
         <div className="relative flex-1 overflow-hidden flex items-center">
