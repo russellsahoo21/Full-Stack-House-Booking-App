@@ -76,12 +76,12 @@ export const Hero: React.FC = () => {
   return (
     <div
       ref={heroRef}
-      className="relative w-full h-[100svh] min-h-[680px] overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
+      className="relative z-30 w-full h-[100svh] min-h-[680px] flex flex-col justify-between pt-24 pb-8 select-none"
     >
       {/* ================= BACKGROUND VIDEO / POSTER FALLBACK ================= */}
       <motion.div
         style={{ scale: videoScale, opacity: videoOpacity }}
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden"
       >
         <video
           ref={videoRef}
@@ -119,7 +119,7 @@ export const Hero: React.FC = () => {
       {/* ================= CENTER HERO CONTENT ================= */}
       <motion.div
         style={{ y: contentY }}
-        className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center my-auto flex flex-col items-center"
+        className="relative z-40 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center my-auto flex flex-col items-center"
       >
         {/* Editorial Sub-badge */}
         <motion.div
@@ -171,7 +171,7 @@ export const Hero: React.FC = () => {
       </motion.div>
 
       {/* ================= HERO FOOTER CONTROLS & CHIPS ================= */}
-      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Trending Glass Chips */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 max-w-full">
           <span className="hidden sm:inline-block text-xs font-semibold uppercase tracking-wider text-white/60 mr-1 shrink-0">

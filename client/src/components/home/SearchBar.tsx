@@ -59,7 +59,12 @@ export const SearchBar: React.FC<{ isCompact?: boolean; className?: string }> = 
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full max-w-4xl mx-auto z-30 ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative w-full max-w-4xl mx-auto ${
+        activeSegment ? 'z-50' : 'z-30'
+      } ${className}`}
+    >
       <form
         onSubmit={handleSearch}
         className={`relative flex flex-col md:flex-row items-center rounded-3xl md:rounded-full shadow-2xl transition-all duration-300 ${
@@ -170,7 +175,7 @@ export const SearchBar: React.FC<{ isCompact?: boolean; className?: string }> = 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 mt-3 w-full md:w-[480px] rounded-3xl glass-panel shadow-2xl p-4 border border-warm-200/80 dark:border-white/10 z-50 overflow-hidden"
+            className="absolute top-full left-0 mt-3 w-full md:w-[480px] rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-4 border border-warm-200/80 dark:border-white/10 z-[70] overflow-hidden"
           >
             <div className="text-xs font-bold uppercase tracking-wider text-ink-400 dark:text-warm-400 px-3 py-2">
               Trending Destinations across India
@@ -209,7 +214,7 @@ export const SearchBar: React.FC<{ isCompact?: boolean; className?: string }> = 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 md:left-1/4 mt-3 w-full md:w-[540px] rounded-3xl glass-panel shadow-2xl p-6 border border-warm-200/80 dark:border-white/10 z-50"
+            className="absolute top-full left-0 md:left-1/4 mt-3 w-full md:w-[540px] rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-6 border border-warm-200/80 dark:border-white/15 z-[70]"
           >
             <div className="flex items-center justify-between pb-4 border-b border-warm-200/60 dark:border-white/10 mb-4">
               <div>
@@ -287,7 +292,7 @@ export const SearchBar: React.FC<{ isCompact?: boolean; className?: string }> = 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full right-0 mt-3 w-full md:w-80 rounded-3xl glass-panel shadow-2xl p-5 border border-warm-200/80 dark:border-white/10 z-50 space-y-4"
+            className="absolute top-full right-0 mt-3 w-full md:w-80 rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-5 border border-warm-200/80 dark:border-white/15 z-[70] space-y-4"
           >
             {/* Adults */}
             <div className="flex items-center justify-between pb-3 border-b border-warm-200/60 dark:border-white/10">
