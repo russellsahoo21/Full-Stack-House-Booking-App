@@ -10,6 +10,7 @@ import Wishlists from '@/pages/Wishlists';
 import Checkout from '@/pages/Checkout';
 import Host from '@/pages/Host';
 import Experiences from '@/pages/Experiences';
+import ExperienceDetail from '@/pages/ExperienceDetail';
 import Services from '@/pages/Services';
 import NotFound from '@/pages/NotFound';
 
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
       {
         path: 'experiences',
         element: <Experiences />,
+      },
+      {
+        path: 'experience/:id',
+        element: <ExperienceDetail />,
       },
       {
         path: 'services',
