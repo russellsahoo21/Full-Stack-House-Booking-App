@@ -38,9 +38,23 @@ export const Experiences: React.FC = () => {
   };
 
   return (
-    <div className="pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full min-h-screen">
-      {/* Header */}
-      <div className="mb-10 text-center max-w-2xl mx-auto">
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Ambient Atmospheric Background Image */}
+      <div className="absolute top-0 left-0 right-0 h-[580px] pointer-events-none select-none overflow-hidden z-0">
+        <img
+          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+          className="w-full h-full object-cover object-center opacity-30 dark:opacity-20 scale-105 filter blur-[0.5px]"
+        />
+        {/* Smooth gradient fade to page background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background" />
+        {/* Soft radial sunset glow in the center */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-sunset-gradient opacity-10 dark:opacity-15 blur-[120px] rounded-full pointer-events-none" />
+      </div>
+
+      <div className="relative z-10 pt-28 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        {/* Header */}
+        <div className="mb-10 text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-sunset-gradient-subtle text-sunset-coral text-xs font-bold uppercase tracking-wider mb-3">
           Wayfound Experiences
         </div>
@@ -251,6 +265,7 @@ export const Experiences: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };
