@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search, MapPin, Calendar, Users, Plus, Minus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { DateRangePicker } from './DateRangePicker';
+
 const POPULAR_DESTINATIONS = [
   { city: 'Goa', desc: 'Sun-drenched beaches & cliffside villas', state: 'Goa' },
   { city: 'Manali', desc: 'Cedar forests & snow-capped peaks', state: 'Himachal Pradesh' },
@@ -207,81 +209,26 @@ export const SearchBar: React.FC<{ isCompact?: boolean; className?: string }> = 
           </motion.div>
         )}
 
-        {/* Dual-Month Calendar Popover */}
+        {/* DateRangePicker Popover */}
         {(activeSegment === 'checkIn' || activeSegment === 'checkOut') && (
           <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 md:left-1/4 mt-3 w-full md:w-[540px] rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-6 border border-warm-200/80 dark:border-white/15 z-[70]"
+            className="absolute top-full left-0 md:left-[10%] lg:left-[18%] mt-3 w-full md:w-[480px] rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-6 border border-warm-200/80 dark:border-white/15 z-[70]"
           >
-            <div className="flex items-center justify-between pb-4 border-b border-warm-200/60 dark:border-white/10 mb-4">
-              <div>
-                <h4 className="text-sm font-bold text-ink-900 dark:text-white">Select Dates</h4>
-                <p className="text-xs text-ink-500 dark:text-warm-400">Flexible getaway dates in November</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCheckIn('Nov 14');
-                    setCheckOut('Nov 19');
-                    setActiveSegment('who');
-                  }}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-sunset-gradient-subtle text-sunset-coral hover:bg-sunset-coral/20 transition-colors"
-                >
-                  This Weekend (Nov 14–19)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCheckIn('Nov 21');
-                    setCheckOut('Nov 26');
-                    setActiveSegment('who');
-                  }}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-warm-200 dark:bg-ink-800 text-ink-700 dark:text-warm-200 hover:bg-warm-300 dark:hover:bg-ink-700 transition-colors"
-                >
-                  Next Week
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Mock Month Grid */}
-            <div className="grid grid-cols-7 gap-2 text-center text-xs">
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-                <span key={d} className="font-bold text-ink-400 py-1">{d}</span>
-              ))}
-              {Array.from({ length: 30 }).map((_, i) => {
-                const day = i + 1;
-                const isSelected = day >= 14 && day <= 19;
-                const isEndpoint = day === 14 || day === 19;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      if (activeSegment === 'checkIn') {
-                        setCheckIn(`Nov ${day}`);
-                        setActiveSegment('checkOut');
-                      } else {
-                        setCheckOut(`Nov ${day}`);
-                        setActiveSegment('who');
-                      }
-                    }}
-                    className={`py-2 rounded-xl text-xs font-medium transition-all ${
-                      isEndpoint
-                        ? 'bg-sunset-gradient text-white font-bold shadow-sm'
-                        : isSelected
-                        ? 'bg-sunset-coral/15 text-sunset-coral dark:text-warm-100 font-semibold'
-                        : 'hover:bg-warm-200 dark:hover:bg-ink-800 text-ink-700 dark:text-warm-200'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
+            <DateRangePicker
+              checkIn={checkIn}
+              checkOut={checkOut}
+              onDatesChange={(newCheckIn, newCheckOut) => {
+                setCheckIn(newCheckIn);
+                setCheckOut(newCheckOut);
+              }}
+              onApply={() => {
+                setActiveSegment('who');
+              }}
+            />
           </motion.div>
         )}
 
