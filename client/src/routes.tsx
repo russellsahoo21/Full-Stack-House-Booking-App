@@ -13,6 +13,7 @@ import Experiences from '@/pages/Experiences';
 import ExperienceDetail from '@/pages/ExperienceDetail';
 import Services from '@/pages/Services';
 import ServiceDetail from '@/pages/ServiceDetail';
+import Trips from '@/pages/Trips';
 import NotFound from '@/pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -59,6 +60,14 @@ export const router = createBrowserRouter([
       {
         path: 'service/:id',
         element: <ServiceDetail />,
+      },
+      {
+        path: 'trips',
+        element: <Trips />,
+      },
+      {
+        path: 'bookings',
+        element: <Trips />,
       },
       {
         path: '*',

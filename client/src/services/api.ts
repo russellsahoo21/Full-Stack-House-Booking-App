@@ -56,34 +56,53 @@ export interface CreateBookingData {
     infants?: number;
     pets?: number;
   };
+  guestInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    specialRequests?: string;
+  };
+  paymentMethod?: string;
   specialRequests?: string;
 }
 
 export interface BookingResponse {
   _id: string;
   listingId: any;
-  userId: any;
-  hostId: string;
+  listing?: any;
+  userId?: any;
+  hostId?: string;
   checkIn: string;
   checkOut: string;
   nights: number;
   guests: {
     adults: number;
-    children: number;
-    infants: number;
-    pets: number;
+    children?: number;
+    infants?: number;
+    pets?: number;
+  };
+  guestInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+    specialRequests?: string;
   };
   pricing: {
-    nightlyRate: number;
-    baseSubtotal: number;
-    cleaningFee: number;
-    serviceFee: number;
-    taxes: number;
-    totalAmount: number;
+    perNight?: number;
+    nightlyRate?: number;
+    subtotal?: number;
+    baseSubtotal?: number;
+    cleaningFee?: number;
+    serviceFee?: number;
+    taxes?: number;
+    total?: number;
+    totalAmount?: number;
     currency: string;
   };
+  paymentMethod?: string;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  bookingStatus: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  cancellationReason?: string;
   createdAt: string;
 }
 
@@ -242,24 +261,34 @@ export const hostsApi = {
 // 4. Bookings API
 // ==========================================
 export const bookingsApi = {
-  async createBooking(data: CreateBookingData): Promise<{ status: string; data: BookingResponse }> {
-    return apiRequest<{ status: string; data: BookingResponse }>('/bookings', {
+  async createBooking(data: CreateBookingData): Promise<{ status?: string; success?: boolean; message?: string; data: BookingResponse }> {
+    return apiRequest<{ status?: string; success?: boolean; message?: string; data: BookingResponse }>('/bookings', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  async getMyBookings(): Promise<{ status: string; count: number; data: BookingResponse[] }> {
-    return apiRequest<{ status: string; count: number; data: BookingResponse[] }>('/bookings/me');
+  async getMyBookings(): Promise<{ status?: string; success?: boolean; count: number; data: BookingResponse[] }> {
+    return apiRequest<{ status?: string; success?: boolean; count: number; data: BookingResponse[] }>('/bookings');
   },
 
-  async getBookingById(id: string): Promise<{ status: string; data: BookingResponse }> {
-    return apiRequest<{ status: string; data: BookingResponse }>(`/bookings/${id}`);
+  async getBookedDates(listingId: string): Promise<{
+    success: boolean;
+    listingId: string;
+    bookedRanges: { checkIn: string; checkOut: string }[];
+    bookedDates: string[];
+  }> {
+    return apiRequest(`/bookings/listing/${listingId}/booked-dates`);
   },
 
-  async cancelBooking(id: string): Promise<{ status: string; message: string; data: BookingResponse }> {
-    return apiRequest<{ status: string; message: string; data: BookingResponse }>(`/bookings/${id}/cancel`, {
+  async getBookingById(id: string): Promise<{ status?: string; success?: boolean; data: BookingResponse }> {
+    return apiRequest<{ status?: string; success?: boolean; data: BookingResponse }>(`/bookings/${id}`);
+  },
+
+  async cancelBooking(id: string, reason = 'Cancelled by guest'): Promise<{ status?: string; success?: boolean; message: string; data: BookingResponse }> {
+    return apiRequest<{ status?: string; success?: boolean; message: string; data: BookingResponse }>(`/bookings/${id}/cancel`, {
       method: 'PATCH',
+      body: JSON.stringify({ reason }),
     });
   },
 };
@@ -268,24 +297,23 @@ export const bookingsApi = {
 // 5. Reviews API
 // ==========================================
 export const reviewsApi = {
-  async getReviewsByListing(listingId: string): Promise<{ status: string; count: number; data: any[] }> {
-    return apiRequest<{ status: string; count: number; data: any[] }>(`/reviews/listing/${listingId}`);
+  async getReviewsByListing(listingId: string): Promise<{ status?: string; success?: boolean; count: number; data: any[] }> {
+    return apiRequest<{ status?: string; success?: boolean; count: number; data: any[] }>(`/reviews/listing/${listingId}`);
   },
 
   async createReview(data: {
     listingId: string;
-    ratings: {
-      overall: number;
-      cleanliness: number;
-      accuracy: number;
-      communication: number;
-      location: number;
-      checkIn: number;
-      value: number;
-    };
+    rating: number;
     comment: string;
-  }): Promise<{ status: string; data: any }> {
-    return apiRequest<{ status: string; data: any }>('/reviews', {
+    cleanliness?: number;
+    accuracy?: number;
+    communication?: number;
+    locationRating?: number;
+    value?: number;
+    userName?: string;
+    userAvatar?: string;
+  }): Promise<{ status?: string; success?: boolean; data: any }> {
+    return apiRequest<{ status?: string; success?: boolean; data: any }>('/reviews', {
       method: 'POST',
       body: JSON.stringify(data),
     });

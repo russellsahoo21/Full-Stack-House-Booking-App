@@ -29,16 +29,40 @@ export const createBooking = async (req: AuthRequest, res: Response, next: NextF
       return next(new AppError(`Listing not found with id ${listingId}`, 404));
     }
 
-    // 2. Calculate nights if not provided
+    // 2. Conflict prevention: check if dates overlap with an existing confirmed booking
+    const reqCheckIn = new Date(checkIn);
+    const reqCheckOut = new Date(checkOut);
+
+    const conflictingBooking = await Booking.findOne({
+      listingId: listing._id,
+      status: 'confirmed',
+      $or: [
+        {
+          checkIn: { $lt: reqCheckOut },
+          checkOut: { $gt: reqCheckIn },
+        },
+      ],
+    });
+
+    if (conflictingBooking) {
+      return next(
+        new AppError(
+          `These dates are already booked for this property (reserved ${new Date(conflictingBooking.checkIn).toLocaleDateString()} to ${new Date(conflictingBooking.checkOut).toLocaleDateString()}). Please select different dates.`,
+          409
+        )
+      );
+    }
+
+    // 3. Calculate nights if not provided
     let nights = Number(requestedNights);
     if (!nights || isNaN(nights) || nights < 1) {
-      const start = new Date(checkIn).getTime();
-      const end = new Date(checkOut).getTime();
+      const start = reqCheckIn.getTime();
+      const end = reqCheckOut.getTime();
       const diffTime = Math.abs(end - start);
       nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
     }
 
-    // 3. Calculate verified pricing
+    // 4. Calculate verified pricing
     const perNight = listing.price.perNight;
     const subtotal = perNight * nights;
     const cleaningFee = listing.price.cleaningFee || 0;
@@ -187,6 +211,45 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
       success: true,
       message: 'Booking cancelled successfully',
       data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all booked date ranges and individual days for a listing
+// @route   GET /api/bookings/listing/:listingId/booked-dates
+// @access  Public
+export const getBookedDatesByListing = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { listingId } = req.params;
+
+    const bookings = await Booking.find({
+      listingId,
+      status: { $in: ['confirmed', 'completed'] },
+    }).select('checkIn checkOut');
+
+    const bookedRanges = bookings.map((b) => ({
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+    }));
+
+    // Generate individual date strings YYYY-MM-DD
+    const bookedDatesSet = new Set<string>();
+    bookings.forEach((b) => {
+      const cur = new Date(b.checkIn);
+      const end = new Date(b.checkOut);
+      while (cur < end) {
+        bookedDatesSet.add(cur.toISOString().split('T')[0]);
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      listingId,
+      bookedRanges,
+      bookedDates: Array.from(bookedDatesSet).sort(),
     });
   } catch (error) {
     next(error);

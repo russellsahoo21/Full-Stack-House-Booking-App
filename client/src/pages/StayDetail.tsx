@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 import { formatPrice } from '@/lib/utils';
-import { listingsApi, reviewsApi } from '@/services/api';
+import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
+import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const StayDetail: React.FC = () => {
@@ -38,6 +39,8 @@ export const StayDetail: React.FC = () => {
   const [stay, setStay] = useState<Listing>(fallbackStay);
   const [host, setHost] = useState<Host>(fallbackHost);
   const [reviews, setReviews] = useState<Review[]>(fallbackReviews);
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -62,6 +65,15 @@ export const StayDetail: React.FC = () => {
         }
       })
       .catch((err) => console.warn('API reviews fetch error:', err.message));
+
+    bookingsApi
+      .getBookedDates(id)
+      .then((res) => {
+        if (isMounted && res?.bookedDates) {
+          setBookedDates(res.bookedDates);
+        }
+      })
+      .catch((err) => console.warn('API booked-dates fetch error:', err.message));
 
     return () => {
       isMounted = false;
@@ -354,11 +366,21 @@ export const StayDetail: React.FC = () => {
 
             {/* Reviews Section */}
             <div id="reviews" className="pb-8 border-b border-warm-200/60 dark:border-white/10">
-              <div className="flex items-center gap-2 mb-6">
-                <Star className="w-5 h-5 fill-sunset-amber text-sunset-amber" />
-                <h3 className="text-xl font-bold text-ink-950 dark:text-white">
-                  {stay.rating.average} · {reviews.length} guest reviews
-                </h3>
+              <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 fill-sunset-amber text-sunset-amber" />
+                  <h3 className="text-xl font-bold text-ink-950 dark:text-white">
+                    {stay.rating.average} · {reviews.length} guest reviews
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-warm-300 dark:border-white/15 text-xs font-bold text-ink-900 dark:text-white hover:border-sunset-coral hover:text-sunset-coral transition-colors"
+                >
+                  <Star className="w-3.5 h-3.5 fill-sunset-coral text-sunset-coral" />
+                  <span>Write a Review</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -420,6 +442,14 @@ export const StayDetail: React.FC = () => {
                   <span className="text-ink-400">({stay.rating.count})</span>
                 </div>
               </div>
+
+              {/* Booked Dates Badge */}
+              {bookedDates.length > 0 && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-sunset-gradient-subtle border border-sunset-coral/20 text-sunset-coral text-[11px] font-semibold">
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span>Popular stay &bull; {bookedDates.length} night(s) already reserved</span>
+                </div>
+              )}
 
               {/* Date & Guest Input Boxes */}
               <div className="border border-warm-300 dark:border-white/15 rounded-2xl overflow-hidden text-xs">
@@ -583,6 +613,18 @@ export const StayDetail: React.FC = () => {
           Reserve
         </button>
       </div>
+
+      {/* Review Submission Modal */}
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        listingId={stay._id}
+        listingTitle={stay.title}
+        listingImage={stay.images[0]}
+        onReviewSubmitted={(newRev) => {
+          setReviews((prev) => [newRev, ...prev]);
+        }}
+      />
     </div>
   );
 };

@@ -4,12 +4,15 @@ import { mockListings } from '@/data/listings';
 import {
   CheckCircle2,
   ArrowLeft,
+  ArrowRight,
   ShieldCheck,
   CreditCard,
   Smartphone,
   Building2,
   Lock,
   Sparkles,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { listingsApi, bookingsApi } from '@/services/api';
@@ -18,11 +21,12 @@ import confetti from 'canvas-confetti';
 
 export const Checkout: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const [stay, setStay] = useState<any>(() => mockListings.find((s) => s._id === id) || mockListings[0]);
   const [isSuccess, setIsSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (!id) return;
@@ -41,17 +45,20 @@ export const Checkout: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setBookingError(null);
     try {
       await bookingsApi.createBooking({
         listingId: stay._id,
         checkIn: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
         checkOut: new Date(Date.now() + 86400000 * 6).toISOString().split('T')[0],
         guests: { adults: 2, children: 0, infants: 0, pets: 0 },
+        guestInfo: {
+          name: user?.name || 'Verified Traveler',
+          email: user?.email || 'guest@wayfound.in',
+          phone: user?.phone || '+91 98765 43210',
+        },
       });
-    } catch (err) {
-      console.warn('Backend booking creation note:', err);
-    } finally {
-      setIsSubmitting(false);
+
       setIsSuccess(true);
       try {
         confetti({
@@ -61,6 +68,11 @@ export const Checkout: React.FC = () => {
           colors: ['#FF5A5F', '#FFB347', '#E83E8C'],
         });
       } catch {}
+    } catch (err: any) {
+      console.warn('Backend booking creation note:', err);
+      setBookingError(err?.message || 'Could not complete reservation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -76,14 +88,23 @@ export const Checkout: React.FC = () => {
         <p className="text-sm sm:text-base text-ink-500 dark:text-warm-300 max-w-lg mb-8 leading-relaxed">
           Your reservation at{' '}
           <span className="font-bold text-ink-900 dark:text-white">{stay.title}</span> in{' '}
-          {stay.location.city} is confirmed. Details and host check-in guide have been sent.
+          {stay.location.city} is confirmed. Details, host check-in guide, and printable receipt are available in your trips.
         </p>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-sunset-gradient text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-glow-sunset hover:scale-105 active:scale-95 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to explore
-        </Link>
+        <div className="flex items-center gap-3.5 flex-wrap justify-center">
+          <Link
+            to="/trips"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-sunset-gradient text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-glow-sunset hover:scale-105 active:scale-95 transition-all"
+          >
+            <span>View My Trips</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border border-warm-300 dark:border-white/15 text-ink-700 dark:text-warm-200 text-xs font-bold uppercase tracking-wider hover:border-ink-900 transition-colors"
+          >
+            Explore More Stays
+          </Link>
+        </div>
       </div>
     );
   }
@@ -226,12 +247,29 @@ export const Checkout: React.FC = () => {
             </div>
           </div>
 
+          {bookingError && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-300">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{bookingError}</span>
+            </div>
+          )}
+
           <button
             onClick={handleConfirm}
-            className="w-full py-4 rounded-full bg-sunset-gradient text-white font-bold text-sm shadow-md hover:shadow-glow-sunset hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full py-4 rounded-full bg-sunset-gradient text-white font-bold text-sm shadow-md hover:shadow-glow-sunset hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <Lock className="w-4 h-4" />
-            <span>Confirm and pay {formatPrice(total)}</span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Confirming reservation...</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4" />
+                <span>Confirm and pay {formatPrice(total)}</span>
+              </>
+            )}
           </button>
         </div>
 

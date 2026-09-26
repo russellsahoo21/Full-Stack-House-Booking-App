@@ -249,6 +249,16 @@ export const Navbar: React.FC = () => {
                         ) : null}
 
                         <Link
+                          to="/trips"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center justify-between px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-medium"
+                        >
+                          <span>My Trips</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sunset-gradient-subtle text-sunset-coral">
+                            Reservations
+                          </span>
+                        </Link>
+                        <Link
                           to="/wishlists"
                           onClick={() => setIsProfileMenuOpen(false)}
                           className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"

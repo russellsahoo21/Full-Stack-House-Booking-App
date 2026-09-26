@@ -5,6 +5,7 @@ import {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  getBookedDatesByListing,
 } from '../controllers/bookingController.js';
 import { optionalAuth, protect } from '../middleware/auth.js';
 
@@ -12,8 +13,10 @@ const router = Router();
 
 router.post('/', optionalAuth, createBooking);
 router.get('/', protect, getBookings);
+router.get('/listing/:listingId/booked-dates', getBookedDatesByListing);
 router.get('/:id', getBookingById);
 router.patch('/:id/status', protect, updateBookingStatus);
+router.patch('/:id/cancel', protect, cancelBooking);
 router.delete('/:id', protect, cancelBooking);
 
 export default router;
