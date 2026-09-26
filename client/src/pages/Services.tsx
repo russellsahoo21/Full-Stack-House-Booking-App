@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockServices } from '@/data/services';
+import { mockServices, Service } from '@/data/services';
+import { servicesApi } from '@/services/api';
 import {
   Sparkles,
   CheckCircle2,
@@ -13,13 +14,30 @@ import { motion } from 'framer-motion';
 
 export const Services: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [services, setServices] = useState<Service[]>(mockServices);
+
+  useEffect(() => {
+    let isMounted = true;
+    servicesApi
+      .getServices()
+      .then((res) => {
+        if (isMounted && res?.data && res.data.length > 0) {
+          setServices(res.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = ['All', 'Culinary', 'Wellness', 'Transport', 'Concierge'];
 
   const filtered =
     selectedCategory === 'All'
-      ? mockServices
-      : mockServices.filter((s) => s.category === selectedCategory);
+      ? services
+      : services.filter((s) => s.category === selectedCategory);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">

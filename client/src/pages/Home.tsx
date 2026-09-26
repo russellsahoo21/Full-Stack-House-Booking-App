@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Hero } from '@/components/home/Hero';
 import { CategoryBar } from '@/components/home/CategoryBar';
 import { FilterModal, FilterState } from '@/components/home/FilterModal';
@@ -9,15 +9,36 @@ import { HostBanner } from '@/components/home/HostBanner';
 import { TestimonialsMarquee } from '@/components/home/TestimonialsMarquee';
 import { mockListings } from '@/data/listings';
 import { CategoryId } from '@/data/types';
+import { listingsApi } from '@/services/api';
 
 export const Home: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all'>('all');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState | null>(null);
+  const [allListings, setAllListings] = useState<any[]>(mockListings);
+
+  // Fetch live listings from MongoDB Atlas Backend
+  useEffect(() => {
+    let isMounted = true;
+    listingsApi
+      .getListings({ limit: 50 })
+      .then((res) => {
+        if (isMounted && res?.data && res.data.length > 0) {
+          setAllListings(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend unavailable, using cached listings:', err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter listings based on active category and modal filter values
   const filteredListings = useMemo(() => {
-    return mockListings.filter((listing) => {
+    return allListings.filter((listing) => {
       // Category check
       if (selectedCategory !== 'all' && !listing.category.includes(selectedCategory)) {
         return false;
@@ -47,17 +68,17 @@ export const Home: React.FC = () => {
 
       return true;
     });
-  }, [selectedCategory, filters]);
+  }, [allListings, selectedCategory, filters]);
 
   // Curated collections
   const goaListings = useMemo(
-    () => mockListings.filter((l) => l.location.state === 'Goa'),
-    []
+    () => allListings.filter((l) => l.location.state === 'Goa'),
+    [allListings]
   );
 
   const mumbaiGetaways = useMemo(
-    () => mockListings.filter((l) => l.location.state === 'Maharashtra'),
-    []
+    () => allListings.filter((l) => l.location.state === 'Maharashtra'),
+    [allListings]
   );
 
   const activeFilterCount = useMemo(() => {
@@ -144,4 +165,5 @@ export const Home: React.FC = () => {
     </div>
   );
 };
+
 export default Home;

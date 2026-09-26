@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockListings } from '@/data/listings';
 import { mockHosts } from '@/data/hosts';
 import { mockReviews } from '@/data/reviews';
+import { Listing, Host, Review } from '@/data/types';
 import {
   Star,
   MapPin,
@@ -23,14 +24,49 @@ import {
 } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 import { formatPrice } from '@/lib/utils';
+import { listingsApi, reviewsApi } from '@/services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const StayDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const stay = mockListings.find((s) => s._id === id) || mockListings[0];
-  const host = mockHosts[stay.hostId] || Object.values(mockHosts)[0];
-  const reviews = mockReviews[stay._id] || mockReviews['stay-1'] || [];
+
+  const fallbackStay = mockListings.find((s) => s._id === id) || mockListings[0];
+  const fallbackHost = mockHosts[fallbackStay.hostId] || Object.values(mockHosts)[0];
+  const fallbackReviews = mockReviews[fallbackStay._id] || mockReviews['stay-1'] || [];
+
+  const [stay, setStay] = useState<Listing>(fallbackStay);
+  const [host, setHost] = useState<Host>(fallbackHost);
+  const [reviews, setReviews] = useState<Review[]>(fallbackReviews);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    listingsApi
+      .getListingById(id)
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setStay(res.data);
+          if (res.data.hostId && typeof res.data.hostId === 'object') {
+            setHost(res.data.hostId);
+          }
+        }
+      })
+      .catch((err) => console.warn('API stay fetch error:', err.message));
+
+    reviewsApi
+      .getReviewsByListing(id)
+      .then((res) => {
+        if (isMounted && res?.data && res.data.length > 0) {
+          setReviews(res.data);
+        }
+      })
+      .catch((err) => console.warn('API reviews fetch error:', err.message));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const { isSaved, toggleWishlist } = useWishlist();
   const saved = isSaved(stay._id);

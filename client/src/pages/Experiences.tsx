@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { mockExperiences } from '@/data/experiences';
 import {
@@ -10,16 +10,34 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
+import { experiencesApi } from '@/services/api';
 import { motion } from 'framer-motion';
 
 export const Experiences: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [experiences, setExperiences] = useState<any[]>(mockExperiences);
+
+  useEffect(() => {
+    let isMounted = true;
+    experiencesApi
+      .getExperiences()
+      .then((res) => {
+        if (isMounted && res?.data && res.data.length > 0) {
+          setExperiences(res.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = ['All', 'Culinary', 'Adventure', 'Nature', 'Culture', 'Wellness'];
 
   const filtered = selectedCategory === 'All'
-    ? mockExperiences
-    : mockExperiences.filter((e) => e.category === selectedCategory);
+    ? experiences
+    : experiences.filter((e) => e.category === selectedCategory);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">

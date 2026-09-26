@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockExperiences, Experience } from '@/data/experiences';
+import { experiencesApi } from '@/services/api';
 import {
   Star,
   MapPin,
@@ -30,7 +31,25 @@ export const ExperienceDetail: React.FC = () => {
   const navigate = useNavigate();
 
   // Find experience or fallback
-  const exp: Experience = mockExperiences.find((e) => e._id === id) || mockExperiences[0];
+  const fallbackExp: Experience = mockExperiences.find((e) => e._id === id) || mockExperiences[0];
+  const [exp, setExp] = useState<Experience>(fallbackExp);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    experiencesApi
+      .getExperienceById(id)
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setExp(res.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   // UI state
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);

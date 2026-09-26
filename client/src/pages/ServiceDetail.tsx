@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockServices, Service } from '@/data/services';
+import { servicesApi } from '@/services/api';
 import {
   Star,
   Clock,
@@ -30,7 +31,25 @@ export const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
   // Find service or fallback to first
-  const service: Service = mockServices.find((s) => s._id === id) || mockServices[0];
+  const fallbackService: Service = mockServices.find((s) => s._id === id) || mockServices[0];
+  const [service, setService] = useState<Service>(fallbackService);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    servicesApi
+      .getServiceById(id)
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setService(res.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   // UI state
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);

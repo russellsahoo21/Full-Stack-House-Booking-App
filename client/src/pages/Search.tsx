@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Compass,
@@ -13,8 +13,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { mockListings } from '@/data/listings';
+import { Listing } from '@/data/types';
 import { ListingCard } from '@/components/home/ListingCard';
 import { formatPrice } from '@/lib/utils';
+import { listingsApi } from '@/services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Search: React.FC = () => {
@@ -28,10 +30,33 @@ export const Search: React.FC = () => {
   const [hoveredStayId, setHoveredStayId] = useState<string | null>(null);
   const [showMobileMap, setShowMobileMap] = useState(false);
   const [sortBy, setSortBy] = useState<'rating' | 'price-asc' | 'price-desc'>('rating');
+  const [listingsData, setListingsData] = useState<Listing[]>(mockListings);
+
+  // Fetch from API
+  useEffect(() => {
+    let isMounted = true;
+    listingsApi
+      .getListings({
+        search: where || undefined,
+        guests: guests ? parseInt(guests, 10) : undefined,
+      })
+      .then((res) => {
+        if (isMounted && res?.data && res.data.length > 0) {
+          setListingsData(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('API error, using cached data:', err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [where, guests]);
 
   // Filter listings based on URL where query + filter chips
   const filteredListings = useMemo(() => {
-    let result = mockListings;
+    let result = listingsData;
 
     if (where.trim()) {
       const q = where.toLowerCase().trim();

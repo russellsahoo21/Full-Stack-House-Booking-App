@@ -4,6 +4,7 @@ import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { MobileTabBar } from './MobileTabBar';
 import { ScrollToTop } from './ScrollToTop';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { useLenis } from '@/hooks/useLenis';
 import { motion } from 'framer-motion';
 
@@ -29,6 +30,7 @@ export const Layout: React.FC = () => {
 
       <Footer />
       <MobileTabBar />
+      <AuthModal />
     </div>
   );
 };

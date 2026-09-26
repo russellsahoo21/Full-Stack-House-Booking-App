@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Globe, Menu, User, Search } from 'lucide-react';
+import { Globe, Menu, User, Search, LogOut } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Navbar: React.FC = () => {
@@ -10,6 +11,7 @@ export const Navbar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
   const isHome = location.pathname === '/';
   const currentTab = location.pathname.startsWith('/experiences')
@@ -169,78 +171,140 @@ export const Navbar: React.FC = () => {
               }
             />
 
-            {/* Profile Menu Pill */}
-            <div className="relative">
-              <button
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className={`flex items-center gap-2.5 p-1.5 pl-3 rounded-full border transition-all shadow-sm ${
-                  showGlass
-                    ? 'border-warm-300/60 dark:border-white/10 hover:shadow-md bg-white/70 dark:bg-ink-800/70 text-ink-800 dark:text-warm-100'
-                    : 'border-white/25 hover:border-white/40 bg-black/20 text-white backdrop-blur-md'
-                }`}
-                aria-label="User menu"
-              >
-                <Menu className="w-4 h-4" />
-                <div className="w-7 h-7 rounded-full bg-sunset-gradient flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  <User className="w-3.5 h-3.5" />
-                </div>
-              </button>
+              {/* Profile Menu Pill */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className={`flex items-center gap-2.5 p-1.5 pl-3 rounded-full border transition-all shadow-sm ${
+                    showGlass
+                      ? 'border-warm-300/60 dark:border-white/10 hover:shadow-md bg-white/70 dark:bg-ink-800/70 text-ink-800 dark:text-warm-100'
+                      : 'border-white/25 hover:border-white/40 bg-black/20 text-white backdrop-blur-md'
+                  }`}
+                  aria-label="User menu"
+                >
+                  <Menu className="w-4 h-4" />
+                  {isAuthenticated && user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-7 h-7 rounded-full object-cover shadow-sm ring-1 ring-sunset-coral/30"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-sunset-gradient flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                      {isAuthenticated && user?.name ? user.name[0].toUpperCase() : <User className="w-3.5 h-3.5" />}
+                    </div>
+                  )}
+                </button>
 
-              {/* Profile Dropdown */}
-              <AnimatePresence>
-                {isProfileMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-60 rounded-2xl glass-panel shadow-xl py-2 z-50 border border-warm-200/80 dark:border-white/10"
-                  >
-                    <div className="px-4 py-2 border-b border-warm-200/60 dark:border-white/5">
-                      <p className="text-xs text-ink-400 dark:text-warm-400">Welcome to Wayfound</p>
-                      <p className="text-sm font-semibold text-ink-900 dark:text-white">Find your way to stay</p>
-                    </div>
-                    <div className="py-1">
-                      <Link
-                        to="/wishlists"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                      >
-                        Wishlists
-                      </Link>
-                      <Link
-                        to="/experiences"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                      >
-                        Experiences
-                      </Link>
-                      <Link
-                        to="/services"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                      >
-                        Services & Concierge
-                      </Link>
-                      <Link
-                        to="/host"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                      >
-                        Host on Wayfound
-                      </Link>
-                      <Link
-                        to="/search"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                      >
-                        Explore all stays
-                      </Link>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                {/* Profile Dropdown */}
+                <AnimatePresence>
+                  {isProfileMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-64 rounded-2xl glass-panel shadow-xl py-2 z-50 border border-warm-200/80 dark:border-white/10"
+                    >
+                      {isAuthenticated && user ? (
+                        <div className="px-4 py-2.5 border-b border-warm-200/60 dark:border-white/5">
+                          <p className="text-sm font-bold text-ink-950 dark:text-white truncate">{user.name}</p>
+                          <p className="text-xs text-ink-500 dark:text-warm-400 truncate">{user.email}</p>
+                          <span className="inline-block mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sunset-gradient-subtle text-sunset-coral">
+                            {user.role === 'admin' ? 'Administrator' : user.role === 'host' ? 'Superhost' : 'Member'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2 border-b border-warm-200/60 dark:border-white/5">
+                          <p className="text-xs text-ink-400 dark:text-warm-400">Welcome to Wayfound</p>
+                          <p className="text-sm font-semibold text-ink-900 dark:text-white">Find your way to stay</p>
+                        </div>
+                      )}
+
+                      <div className="py-1">
+                        {!isAuthenticated ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                openAuthModal('login');
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm font-bold text-ink-900 dark:text-white hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                            >
+                              Log in
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                openAuthModal('register');
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                            >
+                              Sign up
+                            </button>
+                            <div className="my-1 border-t border-warm-200/60 dark:border-white/5" />
+                          </>
+                        ) : null}
+
+                        <Link
+                          to="/wishlists"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                        >
+                          Wishlists
+                        </Link>
+                        <Link
+                          to="/experiences"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                        >
+                          Experiences
+                        </Link>
+                        <Link
+                          to="/services"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                        >
+                          Services & Concierge
+                        </Link>
+                        <Link
+                          to="/host"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                        >
+                          Host on Wayfound
+                        </Link>
+                        <Link
+                          to="/search"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                        >
+                          Explore all stays
+                        </Link>
+
+                        {isAuthenticated && (
+                          <>
+                            <div className="my-1 border-t border-warm-200/60 dark:border-white/5" />
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setIsProfileMenuOpen(false);
+                                await logout();
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors font-medium"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              <span>Log out</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
           </div>
         </div>
       </div>
