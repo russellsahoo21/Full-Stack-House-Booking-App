@@ -36,6 +36,32 @@ export const seedUsers = [
     "phone": "+91 99999 88888",
     "role": "admin",
     "wishlist": []
+  },
+  {
+    "_id": "usr-demo-guest-in",
+    "name": "Guest Explorer",
+    "email": "guest@wayfound.in",
+    "password": "guest123",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+    "phone": "+91 98201 23456",
+    "role": "user",
+    "wishlist": [
+      "stay-1",
+      "stay-2",
+      "stay-3"
+    ]
+  },
+  {
+    "_id": "usr-demo-host-in",
+    "name": "Arjun Sharma",
+    "email": "arjun@wayfound.in",
+    "password": "host123",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+    "phone": "+91 98765 43210",
+    "role": "host",
+    "wishlist": [
+      "stay-2"
+    ]
   }
 ];
 
