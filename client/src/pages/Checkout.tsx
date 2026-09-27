@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { mockListings } from '@/data/listings';
 import {
   CheckCircle2,
@@ -21,6 +21,17 @@ import confetti from 'canvas-confetti';
 
 export const Checkout: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const paramCheckIn = searchParams.get('checkIn');
+  const paramCheckOut = searchParams.get('checkOut');
+  const paramGuests = searchParams.get('guests');
+  const paramNights = searchParams.get('nights');
+
+  const nights = paramNights && parseInt(paramNights, 10) > 0 ? parseInt(paramNights, 10) : 4;
+  const guestsCount = paramGuests && parseInt(paramGuests, 10) > 0 ? parseInt(paramGuests, 10) : 2;
+  const displayCheckIn = paramCheckIn || 'Nov 14, 2026';
+  const displayCheckOut = paramCheckOut || 'Nov 18, 2026';
+
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [stay, setStay] = useState<any>(() => mockListings.find((s) => s._id === id) || mockListings[0]);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -47,11 +58,15 @@ export const Checkout: React.FC = () => {
     setIsSubmitting(true);
     setBookingError(null);
     try {
+      const startDate = new Date(Date.now() + 86400000 * 2);
+      const endDate = new Date(startDate.getTime() + 86400000 * nights);
+
       await bookingsApi.createBooking({
         listingId: stay._id,
-        checkIn: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-        checkOut: new Date(Date.now() + 86400000 * 6).toISOString().split('T')[0],
-        guests: { adults: 2, children: 0, infants: 0, pets: 0 },
+        checkIn: startDate.toISOString().split('T')[0],
+        checkOut: endDate.toISOString().split('T')[0],
+        nights,
+        guests: { adults: guestsCount, children: 0, infants: 0, pets: 0 },
         guestInfo: {
           name: user?.name || 'Verified Traveler',
           email: user?.email || 'guest@wayfound.in',
@@ -109,7 +124,6 @@ export const Checkout: React.FC = () => {
     );
   }
 
-  const nights = 4;
   const subtotal = stay.price.perNight * nights;
   const serviceFee = Math.round(subtotal * (stay.price.serviceFeePercent / 100));
   const total = subtotal + stay.price.cleaningFee + serviceFee;
@@ -153,16 +167,22 @@ export const Checkout: React.FC = () => {
             <div className="flex justify-between items-center text-xs sm:text-sm">
               <div>
                 <span className="font-bold block text-ink-900 dark:text-white">Dates</span>
-                <span className="text-ink-500 dark:text-warm-400">Nov 14 – Nov 18, 2026 ({nights} nights)</span>
+                <span className="text-ink-500 dark:text-warm-400">
+                  {displayCheckIn} – {displayCheckOut} ({nights} nights)
+                </span>
               </div>
-              <span className="text-xs font-bold text-sunset-coral cursor-pointer underline">Edit</span>
+              <Link to={`/stay/${stay._id}`} className="text-xs font-bold text-sunset-coral hover:underline">
+                Edit
+              </Link>
             </div>
             <div className="flex justify-between items-center text-xs sm:text-sm border-t border-warm-200/60 dark:border-white/10 pt-3">
               <div>
                 <span className="font-bold block text-ink-900 dark:text-white">Guests</span>
-                <span className="text-ink-500 dark:text-warm-400">2 guests</span>
+                <span className="text-ink-500 dark:text-warm-400">{guestsCount} guest{guestsCount > 1 ? 's' : ''}</span>
               </div>
-              <span className="text-xs font-bold text-sunset-coral cursor-pointer underline">Edit</span>
+              <Link to={`/stay/${stay._id}`} className="text-xs font-bold text-sunset-coral hover:underline">
+                Edit
+              </Link>
             </div>
           </div>
 

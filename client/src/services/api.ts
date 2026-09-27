@@ -62,6 +62,7 @@ export interface CreateBookingData {
     phone?: string;
     specialRequests?: string;
   };
+  nights?: number;
   paymentMethod?: string;
   specialRequests?: string;
 }

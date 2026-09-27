@@ -22,8 +22,9 @@ import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 interface DateRangePickerProps {
   checkIn: string;
   checkOut: string;
-  onDatesChange: (checkIn: string, checkOut: string) => void;
+  onDatesChange: (checkIn: string, checkOut: string, nights?: number) => void;
   onApply?: () => void;
+  bookedDates?: string[];
 }
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
@@ -31,6 +32,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   checkOut,
   onDatesChange,
   onApply,
+  bookedDates,
 }) => {
   const today = startOfToday();
 
@@ -54,23 +56,25 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   // Day click handler
   const handleDayClick = (day: Date) => {
-    if (isBefore(day, today)) return;
+    const dayStr = format(day, 'yyyy-MM-dd');
+    if (isBefore(day, today) || (bookedDates && bookedDates.includes(dayStr))) return;
 
     if (!startDate || (startDate && endDate)) {
       // Start a new selection
       setStartDate(day);
       setEndDate(null);
-      onDatesChange(format(day, 'MMM d'), '');
+      onDatesChange(format(day, 'MMM d'), '', 0);
     } else if (startDate && !endDate) {
       if (isBefore(day, startDate)) {
         // Clicked before start: reset start to clicked day
         setStartDate(day);
         setEndDate(null);
-        onDatesChange(format(day, 'MMM d'), '');
+        onDatesChange(format(day, 'MMM d'), '', 0);
       } else {
         // Complete range
         setEndDate(day);
-        onDatesChange(format(startDate, 'MMM d'), format(day, 'MMM d'));
+        const nights = differenceInDays(day, startDate);
+        onDatesChange(format(startDate, 'MMM d'), format(day, 'MMM d'), nights);
       }
     }
   };
@@ -82,7 +86,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setStartDate(sat);
     setEndDate(thu);
     setCurrentMonth(startOfMonth(sat));
-    onDatesChange(format(sat, 'MMM d'), format(thu, 'MMM d'));
+    onDatesChange(format(sat, 'MMM d'), format(thu, 'MMM d'), differenceInDays(thu, sat));
   };
 
   const handlePresetNextWeek = () => {
@@ -91,13 +95,13 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setStartDate(mon);
     setEndDate(sat);
     setCurrentMonth(startOfMonth(mon));
-    onDatesChange(format(mon, 'MMM d'), format(sat, 'MMM d'));
+    onDatesChange(format(mon, 'MMM d'), format(sat, 'MMM d'), differenceInDays(sat, mon));
   };
 
   const handleReset = () => {
     setStartDate(null);
     setEndDate(null);
-    onDatesChange('', '');
+    onDatesChange('', '', 0);
   };
 
   // Calculate days in the current displayed month
@@ -208,7 +212,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
         {/* Month Days */}
         {daysInMonth.map((day) => {
+          const dayStr = format(day, 'yyyy-MM-dd');
           const isPast = isBefore(day, today);
+          const isBooked = bookedDates ? bookedDates.includes(dayStr) : false;
+          const isDisabled = isPast || isBooked;
           const isStart = startDate && isSameDay(day, startDate);
           const isEnd = endDate && isSameDay(day, endDate);
           const isEndpoint = isStart || isEnd;
@@ -230,14 +237,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             <button
               key={day.toISOString()}
               type="button"
-              disabled={isPast}
+              disabled={isDisabled}
               onClick={() => handleDayClick(day)}
-              onMouseEnter={() => !isPast && setHoverDate(day)}
+              onMouseEnter={() => !isDisabled && setHoverDate(day)}
+              title={isBooked ? 'Already reserved' : undefined}
               className={`py-2 rounded-xl text-xs transition-all ${
                 isEndpoint
                   ? 'bg-sunset-gradient text-white font-bold shadow-md scale-105 z-10'
                   : isInRange || isHoverRange
                   ? 'bg-sunset-coral/20 text-sunset-coral dark:text-warm-100 font-semibold'
+                  : isBooked
+                  ? 'text-rose-400 dark:text-rose-500/60 line-through opacity-40 cursor-not-allowed bg-rose-500/5'
                   : isPast
                   ? 'text-ink-300 dark:text-warm-600 opacity-20 cursor-not-allowed'
                   : 'hover:bg-warm-200 dark:hover:bg-ink-800 text-ink-700 dark:text-warm-200 font-medium'

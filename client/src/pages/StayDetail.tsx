@@ -26,6 +26,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { formatPrice } from '@/lib/utils';
 import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { DateRangePicker } from '@/components/home/DateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const StayDetail: React.FC = () => {
@@ -41,6 +42,7 @@ export const StayDetail: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>(fallbackReviews);
   const [bookedDates, setBookedDates] = useState<string[]>([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -452,27 +454,72 @@ export const StayDetail: React.FC = () => {
               )}
 
               {/* Date & Guest Input Boxes */}
-              <div className="border border-warm-300 dark:border-white/15 rounded-2xl overflow-hidden text-xs">
+              <div className="relative border border-warm-300 dark:border-white/15 rounded-2xl text-xs">
                 <div className="grid grid-cols-2 border-b border-warm-300 dark:border-white/15">
-                  <div className="p-3 border-r border-warm-300 dark:border-white/15">
-                    <span className="font-bold text-[10px] uppercase text-ink-400 block">Check-in</span>
-                    <input
-                      type="text"
-                      value={checkInDate}
-                      onChange={(e) => setCheckInDate(e.target.value)}
-                      className="w-full bg-transparent font-semibold text-ink-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <span className="font-bold text-[10px] uppercase text-ink-400 block">Checkout</span>
-                    <input
-                      type="text"
-                      value={checkOutDate}
-                      onChange={(e) => setCheckOutDate(e.target.value)}
-                      className="w-full bg-transparent font-semibold text-ink-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
+                    className="p-3 text-left border-r border-warm-300 dark:border-white/15 hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tl-2xl cursor-pointer group"
+                  >
+                    <span className="font-bold text-[10px] uppercase text-ink-400 dark:text-warm-400 block mb-0.5">
+                      Check-in
+                    </span>
+                    <span className="font-semibold text-xs text-ink-900 dark:text-white group-hover:text-sunset-coral transition-colors flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-sunset-coral" />
+                      <span>{checkInDate || 'Add date'}</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
+                    className="p-3 text-left hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tr-2xl cursor-pointer group"
+                  >
+                    <span className="font-bold text-[10px] uppercase text-ink-400 dark:text-warm-400 block mb-0.5">
+                      Checkout
+                    </span>
+                    <span className="font-semibold text-xs text-ink-900 dark:text-white group-hover:text-sunset-coral transition-colors flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-sunset-coral" />
+                      <span>{checkOutDate || 'Add date'}</span>
+                    </span>
+                  </button>
                 </div>
+
+                {/* Popover Calendar Picker */}
+                <AnimatePresence>
+                  {isDatePickerOpen && (
+                    <>
+                      {/* Transparent backdrop for outside click dismissal */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsDatePickerOpen(false)}
+                      />
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 w-[340px] sm:w-[420px] rounded-3xl bg-white/95 dark:bg-ink-900/95 backdrop-blur-2xl shadow-2xl p-5 border border-warm-200/90 dark:border-white/15 z-50"
+                      >
+                        <DateRangePicker
+                          checkIn={checkInDate}
+                          checkOut={checkOutDate}
+                          bookedDates={bookedDates}
+                          onDatesChange={(newIn, newOut, newNights) => {
+                            setCheckInDate(newIn);
+                            setCheckOutDate(newOut);
+                            if (newNights && newNights > 0) {
+                              setNights(newNights);
+                            }
+                          }}
+                          onApply={() => setIsDatePickerOpen(false)}
+                        />
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+
                 <div className="p-3 flex items-center justify-between">
                   <div>
                     <span className="font-bold text-[10px] uppercase text-ink-400 block">Guests</span>
@@ -497,7 +544,11 @@ export const StayDetail: React.FC = () => {
 
               {/* Reserve Button */}
               <button
-                onClick={() => navigate(`/book/${stay._id}`)}
+                onClick={() =>
+                  navigate(
+                    `/book/${stay._id}?checkIn=${encodeURIComponent(checkInDate)}&checkOut=${encodeURIComponent(checkOutDate)}&guests=${guests}&nights=${nights}`
+                  )
+                }
                 className="w-full py-4 rounded-full bg-sunset-gradient text-white font-bold text-sm shadow-md hover:shadow-glow-sunset hover:scale-[1.01] active:scale-[0.99] transition-all"
               >
                 Reserve stay
@@ -607,7 +658,11 @@ export const StayDetail: React.FC = () => {
           <p className="text-[10px] text-ink-500 underline">{checkInDate} – {checkOutDate}</p>
         </div>
         <button
-          onClick={() => navigate(`/book/${stay._id}`)}
+          onClick={() =>
+            navigate(
+              `/book/${stay._id}?checkIn=${encodeURIComponent(checkInDate)}&checkOut=${encodeURIComponent(checkOutDate)}&guests=${guests}&nights=${nights}`
+            )
+          }
           className="px-6 py-3 rounded-full bg-sunset-gradient text-white font-bold text-xs shadow-md"
         >
           Reserve
