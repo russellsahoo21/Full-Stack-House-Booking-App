@@ -31,6 +31,7 @@ const sendTokenResponse = (user: any, statusCode: number, res: Response): void =
     success: true,
     token,
     data: userObj,
+    user: userObj,
   });
 };
 
@@ -97,6 +98,7 @@ export const getMe = async (req: AuthRequest, res: Response, next: NextFunction)
     res.status(200).json({
       success: true,
       data: user,
+      user,
     });
   } catch (error) {
     next(error);
@@ -119,6 +121,7 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
     res.status(200).json({
       success: true,
       data: user,
+      user,
     });
   } catch (error) {
     next(error);
@@ -130,7 +133,7 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
 // @access  Private
 export const toggleWishlist = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { listingId } = req.body;
+    const listingId = req.body?.listingId || req.params?.listingId;
     if (!listingId) {
       return next(new AppError('listingId is required to update wishlist', 400));
     }

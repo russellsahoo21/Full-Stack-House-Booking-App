@@ -24,9 +24,11 @@ export interface User {
 }
 
 export interface AuthResponse {
-  status: string;
+  status?: string;
+  success?: boolean;
   token: string;
   user: User;
+  data?: User;
 }
 
 export interface ListingFilterParams {
@@ -149,25 +151,27 @@ export async function apiRequest<T = any>(
 // ==========================================
 export const authApi = {
   async register(body: { name: string; email: string; password: string; phone?: string }): Promise<AuthResponse> {
-    const res = await apiRequest<AuthResponse>('/auth/register', {
+    const res = await apiRequest<any>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
     });
     if (res.token) {
       localStorage.setItem('wayfound_token', res.token);
     }
-    return res;
+    const user = res.user || res.data;
+    return { ...res, user, data: user };
   },
 
   async login(body: { email: string; password: string }): Promise<AuthResponse> {
-    const res = await apiRequest<AuthResponse>('/auth/login', {
+    const res = await apiRequest<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(body),
     });
     if (res.token) {
       localStorage.setItem('wayfound_token', res.token);
     }
-    return res;
+    const user = res.user || res.data;
+    return { ...res, user, data: user };
   },
 
   async logout(): Promise<void> {
@@ -180,15 +184,19 @@ export const authApi = {
     }
   },
 
-  async getMe(): Promise<{ status: string; user: User }> {
-    return apiRequest<{ status: string; user: User }>('/auth/me');
+  async getMe(): Promise<{ status?: string; success?: boolean; user: User; data: User }> {
+    const res = await apiRequest<any>('/auth/me');
+    const user = res.user || res.data;
+    return { ...res, user, data: user };
   },
 
-  async updateProfile(updates: Partial<User>): Promise<{ status: string; user: User }> {
-    return apiRequest<{ status: string; user: User }>('/auth/profile', {
+  async updateProfile(updates: Partial<User>): Promise<{ status?: string; success?: boolean; user: User; data: User }> {
+    const res = await apiRequest<any>('/auth/profile', {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
+    const user = res.user || res.data;
+    return { ...res, user, data: user };
   },
 
   async getWishlist(): Promise<{ status: string; wishlist: any[] }> {

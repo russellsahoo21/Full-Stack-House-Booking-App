@@ -18,7 +18,9 @@ router.post('/logout', logout);
 
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.patch('/profile', protect, updateProfile);
 router.post('/wishlist/toggle', protect, toggleWishlist);
+router.post('/wishlist/:listingId', protect, toggleWishlist);
 router.get('/wishlist', protect, getWishlist);
 
 export default router;

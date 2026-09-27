@@ -37,9 +37,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const res = await authApi.getMe();
-      if (res.user) {
-        setUser(res.user);
+      const currentUser = (res as any)?.user || (res as any)?.data;
+      if (currentUser) {
+        setUser(currentUser);
         setToken(storedToken);
+      } else {
+        localStorage.removeItem('wayfound_token');
+        setUser(null);
+        setToken(null);
       }
     } catch (err) {
       console.warn('Session expired or invalid token:', err);
@@ -57,14 +62,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login({ email, password });
-    setUser(res.user);
+    const currentUser = (res as any)?.user || (res as any)?.data;
+    setUser(currentUser);
     setToken(res.token);
     setIsAuthModalOpen(false);
   };
 
   const register = async (name: string, email: string, password: string, phone?: string) => {
     const res = await authApi.register({ name, email, password, phone });
-    setUser(res.user);
+    const currentUser = (res as any)?.user || (res as any)?.data;
+    setUser(currentUser);
     setToken(res.token);
     setIsAuthModalOpen(false);
   };
