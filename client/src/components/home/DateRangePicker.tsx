@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   format,
   addMonths,
@@ -12,7 +12,6 @@ import {
   isAfter,
   startOfToday,
   nextSaturday,
-  nextSunday,
   nextMonday,
   addDays,
   differenceInDays,
@@ -20,9 +19,18 @@ import {
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface DateRangePickerProps {
-  checkIn: string;
-  checkOut: string;
-  onDatesChange: (checkIn: string, checkOut: string, nights?: number) => void;
+  checkIn?: string;
+  checkOut?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  focusedInput?: 'checkIn' | 'checkOut';
+  onDatesChange: (
+    checkIn: string,
+    checkOut: string,
+    nights?: number,
+    start?: Date | null,
+    end?: Date | null
+  ) => void;
   onApply?: () => void;
   bookedDates?: string[];
 }
@@ -30,17 +38,39 @@ interface DateRangePickerProps {
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   checkIn,
   checkOut,
+  startDate: propStartDate,
+  endDate: propEndDate,
+  focusedInput = 'checkIn',
   onDatesChange,
   onApply,
   bookedDates,
 }) => {
   const today = startOfToday();
 
-  // Initial range: today + 2 to today + 7
-  const [startDate, setStartDate] = useState<Date | null>(() => addDays(today, 2));
-  const [endDate, setEndDate] = useState<Date | null>(() => addDays(today, 7));
-  const [currentMonth, setCurrentMonth] = useState<Date>(() => startOfMonth(today));
+  const [activeInput, setActiveInput] = useState<'checkIn' | 'checkOut'>(focusedInput);
+  const [startDate, setStartDate] = useState<Date | null>(propStartDate ?? null);
+  const [endDate, setEndDate] = useState<Date | null>(propEndDate ?? null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(() =>
+    startOfMonth(propStartDate ?? today)
+  );
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
+
+  // Sync with props
+  useEffect(() => {
+    if (propStartDate !== undefined) {
+      setStartDate(propStartDate);
+    }
+  }, [propStartDate]);
+
+  useEffect(() => {
+    if (propEndDate !== undefined) {
+      setEndDate(propEndDate);
+    }
+  }, [propEndDate]);
+
+  useEffect(() => {
+    setActiveInput(focusedInput);
+  }, [focusedInput]);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -59,22 +89,32 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     const dayStr = format(day, 'yyyy-MM-dd');
     if (isBefore(day, today) || (bookedDates && bookedDates.includes(dayStr))) return;
 
-    if (!startDate || (startDate && endDate)) {
-      // Start a new selection
+    if (activeInput === 'checkIn') {
+      // User is selecting check-in
       setStartDate(day);
-      setEndDate(null);
-      onDatesChange(format(day, 'MMM d'), '', 0);
-    } else if (startDate && !endDate) {
-      if (isBefore(day, startDate)) {
-        // Clicked before start: reset start to clicked day
-        setStartDate(day);
+      if (endDate && (isBefore(endDate, day) || isSameDay(endDate, day))) {
         setEndDate(null);
-        onDatesChange(format(day, 'MMM d'), '', 0);
+        onDatesChange(format(day, 'MMM d'), '', 0, day, null);
+      } else if (endDate) {
+        const nights = differenceInDays(endDate, day);
+        onDatesChange(format(day, 'MMM d'), format(endDate, 'MMM d'), nights, day, endDate);
       } else {
-        // Complete range
+        onDatesChange(format(day, 'MMM d'), '', 0, day, null);
+      }
+      // Automatically switch target to checkout
+      setActiveInput('checkOut');
+    } else {
+      // User is selecting checkout
+      if (startDate && isAfter(day, startDate)) {
         setEndDate(day);
         const nights = differenceInDays(day, startDate);
-        onDatesChange(format(startDate, 'MMM d'), format(day, 'MMM d'), nights);
+        onDatesChange(format(startDate, 'MMM d'), format(day, 'MMM d'), nights, startDate, day);
+      } else {
+        // If clicked on or before startDate, set as new startDate and stay on checkout
+        setStartDate(day);
+        setEndDate(null);
+        onDatesChange(format(day, 'MMM d'), '', 0, day, null);
+        setActiveInput('checkOut');
       }
     }
   };
@@ -86,7 +126,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setStartDate(sat);
     setEndDate(thu);
     setCurrentMonth(startOfMonth(sat));
-    onDatesChange(format(sat, 'MMM d'), format(thu, 'MMM d'), differenceInDays(thu, sat));
+    const n = differenceInDays(thu, sat);
+    onDatesChange(format(sat, 'MMM d'), format(thu, 'MMM d'), n, sat, thu);
+    setActiveInput('checkOut');
   };
 
   const handlePresetNextWeek = () => {
@@ -95,13 +137,16 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setStartDate(mon);
     setEndDate(sat);
     setCurrentMonth(startOfMonth(mon));
-    onDatesChange(format(mon, 'MMM d'), format(sat, 'MMM d'), differenceInDays(sat, mon));
+    const n = differenceInDays(sat, mon);
+    onDatesChange(format(mon, 'MMM d'), format(sat, 'MMM d'), n, mon, sat);
+    setActiveInput('checkOut');
   };
 
   const handleReset = () => {
     setStartDate(null);
     setEndDate(null);
-    onDatesChange('', '', 0);
+    onDatesChange('', '', 0, null, null);
+    setActiveInput('checkIn');
   };
 
   // Calculate days in the current displayed month
@@ -111,18 +156,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const startPadding = getDay(monthStart); // 0 = Sunday, 1 = Monday, etc.
 
   const nightsCount =
-    startDate && endDate ? differenceInDays(endDate, startDate) : 0;
-
-  const formattedRangeText =
-    startDate && endDate
-      ? `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d')}`
-      : startDate
-      ? `${format(startDate, 'MMM d')} – Select check-out`
-      : 'Flexible getaway dates';
+    startDate && endDate ? Math.max(0, differenceInDays(endDate, startDate)) : 0;
 
   return (
     <div className="w-full space-y-4 select-none">
-      {/* 1. Header with Title, Dynamic Dates, and Quick Preset Buttons */}
+      {/* 1. Header with Dynamic Dates & Preset Shortcuts */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-warm-200/60 dark:border-white/10 gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -131,16 +169,18 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             </h4>
             {nightsCount > 0 && (
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sunset-coral/15 text-sunset-coral dark:text-warm-100">
-                {nightsCount} nights
+                {nightsCount} night{nightsCount > 1 ? 's' : ''}
               </span>
             )}
           </div>
           <p className="text-xs text-ink-500 dark:text-warm-400 mt-0.5">
-            {formattedRangeText}
+            {activeInput === 'checkIn'
+              ? 'Select check-in date'
+              : 'Select check-out date'}
           </p>
         </div>
 
-        {/* Preset Action Pills matching exact design */}
+        {/* Preset Action Pills */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -167,7 +207,44 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         </div>
       </div>
 
-      {/* 2. Month Navigation Row */}
+      {/* 2. Check-In & Check-Out Interactive Focus Tabs */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-warm-100/90 dark:bg-ink-800/80 rounded-2xl border border-warm-200/60 dark:border-white/10">
+        <button
+          type="button"
+          onClick={() => setActiveInput('checkIn')}
+          className={`py-2 px-3.5 rounded-xl text-left transition-all ${
+            activeInput === 'checkIn'
+              ? 'bg-white dark:bg-ink-900 shadow-sm border border-sunset-coral/40 text-sunset-coral'
+              : 'text-ink-600 dark:text-warm-300 hover:bg-white/50 dark:hover:bg-white/5'
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
+            Check-In
+          </span>
+          <span className="text-xs font-bold block truncate">
+            {startDate ? format(startDate, 'MMM d, yyyy') : 'Select date'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveInput('checkOut')}
+          className={`py-2 px-3.5 rounded-xl text-left transition-all ${
+            activeInput === 'checkOut'
+              ? 'bg-white dark:bg-ink-900 shadow-sm border border-sunset-coral/40 text-sunset-coral'
+              : 'text-ink-600 dark:text-warm-300 hover:bg-white/50 dark:hover:bg-white/5'
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
+            Check-Out
+          </span>
+          <span className="text-xs font-bold block truncate">
+            {endDate ? format(endDate, 'MMM d, yyyy') : 'Select date'}
+          </span>
+        </button>
+      </div>
+
+      {/* 3. Month Navigation Row */}
       <div className="flex items-center justify-between px-1">
         <span className="text-sm font-bold text-ink-950 dark:text-white tracking-tight">
           {format(currentMonth, 'MMMM yyyy')}
@@ -191,16 +268,16 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         </div>
       </div>
 
-      {/* 3. Weekday Labels Header */}
-      <div className="grid grid-cols-7 gap-2 text-center text-xs">
+      {/* 4. Days of the Week Header */}
+      <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-bold text-ink-400 dark:text-warm-400">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-          <span key={d} className="font-bold text-ink-400 dark:text-warm-400 py-1">
+          <div key={d} className="py-1">
             {d}
-          </span>
+          </div>
         ))}
       </div>
 
-      {/* 4. Calendar Day Grid matching user's original design */}
+      {/* 5. Calendar Days Grid */}
       <div
         className="grid grid-cols-7 gap-2 text-center text-xs"
         onMouseLeave={() => setHoverDate(null)}
@@ -228,6 +305,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           const isHoverRange =
             startDate &&
             !endDate &&
+            activeInput === 'checkOut' &&
             hoverDate &&
             isAfter(hoverDate, startDate) &&
             isAfter(day, startDate) &&
@@ -259,7 +337,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         })}
       </div>
 
-      {/* 5. Footer with Current Dates and Done CTA */}
+      {/* 6. Footer with Current Dates and Done CTA */}
       <div className="pt-3 border-t border-warm-200/60 dark:border-white/10 flex items-center justify-between text-xs">
         <div className="text-ink-600 dark:text-warm-300 font-medium">
           {startDate ? (
@@ -268,7 +346,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               {endDate ? (
                 <> · Check-out: <strong className="text-ink-950 dark:text-white">{format(endDate, 'MMM d')}</strong></>
               ) : (
-                <span className="text-sunset-coral italic"> (select check-out)</span>
+                <span className="text-sunset-coral italic font-semibold"> &rarr; Now select check-out</span>
               )}
             </span>
           ) : (
@@ -280,8 +358,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           <button
             type="button"
             onClick={onApply}
-            disabled={!startDate || !endDate}
-            className="px-5 py-2 rounded-full bg-sunset-gradient text-white font-bold text-xs shadow-sm hover:shadow-glow-sunset active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="px-5 py-2 rounded-full bg-sunset-gradient text-white font-bold text-xs shadow-sm hover:shadow-glow-sunset active:scale-95 transition-all"
           >
             Done
           </button>

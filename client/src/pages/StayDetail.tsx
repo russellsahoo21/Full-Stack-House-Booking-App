@@ -28,6 +28,7 @@ import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { DateRangePicker } from '@/components/home/DateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format, addDays } from 'date-fns';
 
 export const StayDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -91,10 +92,13 @@ export const StayDetail: React.FC = () => {
   const [showAllAmenities, setShowAllAmenities] = useState(false);
 
   // Booking Card States
+  const [startDate, setStartDate] = useState<Date | null>(() => addDays(new Date(), 2));
+  const [endDate, setEndDate] = useState<Date | null>(() => addDays(new Date(), 6));
+  const [focusedInput, setFocusedInput] = useState<'checkIn' | 'checkOut'>('checkIn');
   const [nights, setNights] = useState(4);
   const [guests, setGuests] = useState(2);
-  const [checkInDate, setCheckInDate] = useState('Nov 14');
-  const [checkOutDate, setCheckOutDate] = useState('Nov 18');
+  const [checkInDate, setCheckInDate] = useState(() => format(addDays(new Date(), 2), 'MMM d'));
+  const [checkOutDate, setCheckOutDate] = useState(() => format(addDays(new Date(), 6), 'MMM d'));
 
   // Sticky mini header when scrolling
   const [showMiniHeader, setShowMiniHeader] = useState(false);
@@ -163,7 +167,11 @@ export const StayDetail: React.FC = () => {
                 <span className="text-xs text-ink-400"> / night</span>
               </div>
               <button
-                onClick={() => navigate(`/book/${stay._id}`)}
+                onClick={() =>
+                  navigate(
+                    `/book/${stay._id}?checkIn=${encodeURIComponent(checkInDate)}&checkOut=${encodeURIComponent(checkOutDate)}&guests=${guests}&nights=${nights}`
+                  )
+                }
                 className="px-5 py-2.5 rounded-full bg-sunset-gradient text-white text-xs font-bold shadow-md hover:shadow-glow-sunset"
               >
                 Reserve
@@ -458,8 +466,15 @@ export const StayDetail: React.FC = () => {
                 <div className="grid grid-cols-2 border-b border-warm-300 dark:border-white/15">
                   <button
                     type="button"
-                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                    className="p-3 text-left border-r border-warm-300 dark:border-white/15 hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tl-2xl cursor-pointer group"
+                    onClick={() => {
+                      setFocusedInput('checkIn');
+                      setIsDatePickerOpen(true);
+                    }}
+                    className={`p-3 text-left border-r border-warm-300 dark:border-white/15 hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tl-2xl cursor-pointer group ${
+                      isDatePickerOpen && focusedInput === 'checkIn'
+                        ? 'bg-warm-100/80 dark:bg-ink-800/80 ring-2 ring-sunset-coral/40'
+                        : ''
+                    }`}
                   >
                     <span className="font-bold text-[10px] uppercase text-ink-400 dark:text-warm-400 block mb-0.5">
                       Check-in
@@ -472,8 +487,15 @@ export const StayDetail: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                    className="p-3 text-left hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tr-2xl cursor-pointer group"
+                    onClick={() => {
+                      setFocusedInput('checkOut');
+                      setIsDatePickerOpen(true);
+                    }}
+                    className={`p-3 text-left hover:bg-warm-100/60 dark:hover:bg-ink-800/60 transition-colors rounded-tr-2xl cursor-pointer group ${
+                      isDatePickerOpen && focusedInput === 'checkOut'
+                        ? 'bg-warm-100/80 dark:bg-ink-800/80 ring-2 ring-sunset-coral/40'
+                        : ''
+                    }`}
                   >
                     <span className="font-bold text-[10px] uppercase text-ink-400 dark:text-warm-400 block mb-0.5">
                       Checkout
@@ -505,11 +527,16 @@ export const StayDetail: React.FC = () => {
                         <DateRangePicker
                           checkIn={checkInDate}
                           checkOut={checkOutDate}
+                          startDate={startDate}
+                          endDate={endDate}
+                          focusedInput={focusedInput}
                           bookedDates={bookedDates}
-                          onDatesChange={(newIn, newOut, newNights) => {
+                          onDatesChange={(newIn, newOut, newNights, start, end) => {
                             setCheckInDate(newIn);
                             setCheckOutDate(newOut);
-                            if (newNights && newNights > 0) {
+                            if (start !== undefined) setStartDate(start);
+                            if (end !== undefined) setEndDate(end);
+                            if (newNights !== undefined && newNights > 0) {
                               setNights(newNights);
                             }
                           }}
