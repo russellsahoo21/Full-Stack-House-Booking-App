@@ -230,19 +230,9 @@ export const Navbar: React.FC = () => {
                                 setIsProfileMenuOpen(false);
                                 openAuthModal('login');
                               }}
-                              className="w-full text-left px-4 py-2 text-sm font-bold text-ink-900 dark:text-white hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
+                              className="w-full text-left px-4 py-2.5 text-sm font-bold text-ink-900 dark:text-white hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
                             >
-                              Log in
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsProfileMenuOpen(false);
-                                openAuthModal('register');
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors"
-                            >
-                              Sign up
+                              Login / Signup
                             </button>
                             <div className="my-1 border-t border-warm-200/60 dark:border-white/5" />
                           </>
