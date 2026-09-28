@@ -371,24 +371,44 @@ export const servicesApi = {
 };
 
 // ==========================================
-// 8. Payments API
+// 8. Payments API (Razorpay & Online Gateway)
 // ==========================================
 export const paymentsApi = {
-  async createOrder(bookingId: string, paymentMethod = 'upi'): Promise<{ status: string; order: any }> {
-    return apiRequest<{ status: string; order: any }>('/payments/create-order', {
+  async getKey(): Promise<{ success: boolean; keyId: string }> {
+    return apiRequest<{ success: boolean; keyId: string }>('/payments/key');
+  },
+
+  async createOrder(payload: {
+    listingId: string;
+    nights: number;
+    guests?: any;
+    guestInfo?: any;
+    paymentMethod?: string;
+  }): Promise<{ success: boolean; data: any }> {
+    return apiRequest<{ success: boolean; data: any }>('/payments/create-order', {
       method: 'POST',
-      body: JSON.stringify({ bookingId, paymentMethod }),
+      body: JSON.stringify(payload),
     });
   },
 
   async verifyPayment(data: {
-    orderId: string;
-    paymentId: string;
-    signature?: string;
-  }): Promise<{ status: string; message: string; booking: any }> {
-    return apiRequest<{ status: string; message: string; booking: any }>('/payments/verify', {
+    orderId?: string;
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+    paymentId?: string;
+    listingId: string;
+    checkIn: string;
+    checkOut: string;
+    nights: number;
+    guests?: any;
+    guestInfo?: any;
+    paymentMethod?: string;
+  }): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest<{ success: boolean; message: string; data: any }>('/payments/verify', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 };
+

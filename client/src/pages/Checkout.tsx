@@ -15,9 +15,24 @@ import {
   Loader2,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
-import { listingsApi, bookingsApi } from '@/services/api';
+import { listingsApi, bookingsApi, paymentsApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import confetti from 'canvas-confetti';
+
+const loadRazorpay = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export const Checkout: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +50,7 @@ export const Checkout: React.FC = () => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [stay, setStay] = useState<any>(() => mockListings.find((s) => s._id === id) || mockListings[0]);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'upi' | 'card' | 'netbanking'>('razorpay');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
@@ -57,21 +72,121 @@ export const Checkout: React.FC = () => {
 
     setIsSubmitting(true);
     setBookingError(null);
-    try {
-      const startDate = new Date(Date.now() + 86400000 * 2);
-      const endDate = new Date(startDate.getTime() + 86400000 * nights);
 
-      await bookingsApi.createBooking({
+    const startDate = new Date(Date.now() + 86400000 * 2);
+    const endDate = new Date(startDate.getTime() + 86400000 * nights);
+    const checkInStr = startDate.toISOString().split('T')[0];
+    const checkOutStr = endDate.toISOString().split('T')[0];
+
+    const guestPayload = {
+      name: user?.name || 'Verified Traveler',
+      email: user?.email || 'guest@wayfound.in',
+      phone: user?.phone || '+91 98765 43210',
+    };
+
+    try {
+      // 1. Create payment order on backend
+      const orderRes = await paymentsApi.createOrder({
         listingId: stay._id,
-        checkIn: startDate.toISOString().split('T')[0],
-        checkOut: endDate.toISOString().split('T')[0],
         nights,
         guests: { adults: guestsCount, children: 0, infants: 0, pets: 0 },
-        guestInfo: {
-          name: user?.name || 'Verified Traveler',
-          email: user?.email || 'guest@wayfound.in',
-          phone: user?.phone || '+91 98765 43210',
-        },
+        guestInfo: guestPayload,
+        paymentMethod,
+      });
+
+      const orderData = orderRes?.data;
+      const keyId =
+        orderData?.keyId ||
+        (import.meta as any).env?.VITE_RAZORPAY_KEY_ID ||
+        'rzp_test_VluIVfT6rvYkaJ';
+
+      const scriptLoaded = await loadRazorpay();
+
+      // If Razorpay SDK loaded and we have a valid key, launch Razorpay Checkout modal
+      if (scriptLoaded && (window as any).Razorpay && keyId) {
+        const rzpOrderId =
+          orderData?.razorpayOrder?.id ||
+          (orderData?.orderId?.startsWith('order_') ? undefined : orderData?.orderId);
+
+        const options: any = {
+          key: keyId,
+          amount: Math.round(total * 100),
+          currency: 'INR',
+          name: 'Wayfound Stay Booking',
+          description: `Reservation at ${stay.title}`,
+          image: stay.images?.[0] || 'https://cdn-icons-png.flaticon.com/512/2111/2111463.png',
+          order_id: rzpOrderId,
+          prefill: {
+            name: guestPayload.name,
+            email: guestPayload.email,
+            contact: guestPayload.phone,
+          },
+          notes: {
+            listingId: stay._id,
+            property: stay.title,
+            city: stay.location?.city || '',
+          },
+          theme: {
+            color: '#FF5A5F',
+          },
+          handler: async (response: any) => {
+            try {
+              setIsSubmitting(true);
+              await paymentsApi.verifyPayment({
+                orderId: response.razorpay_order_id || orderData?.orderId || rzpOrderId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId: response.razorpay_payment_id,
+                listingId: stay._id,
+                checkIn: checkInStr,
+                checkOut: checkOutStr,
+                nights,
+                guests: { adults: guestsCount, children: 0, infants: 0, pets: 0 },
+                guestInfo: guestPayload,
+                paymentMethod,
+              });
+
+              setIsSuccess(true);
+              try {
+                confetti({
+                  particleCount: 120,
+                  spread: 80,
+                  origin: { y: 0.6 },
+                  colors: ['#FF5A5F', '#FFB347', '#E83E8C'],
+                });
+              } catch {}
+            } catch (vErr: any) {
+              setBookingError(vErr?.message || 'Payment verification failed. Please try again.');
+            } finally {
+              setIsSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', (resp: any) => {
+          console.error('Razorpay payment failed:', resp.error);
+          setBookingError(resp.error?.description || 'Payment was declined or failed.');
+          setIsSubmitting(false);
+        });
+        rzp.open();
+        return;
+      }
+
+      // Fallback: direct booking confirmation if script blocked
+      await bookingsApi.createBooking({
+        listingId: stay._id,
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        nights,
+        guests: { adults: guestsCount, children: 0, infants: 0, pets: 0 },
+        guestInfo: guestPayload,
       });
 
       setIsSuccess(true);
@@ -90,6 +205,7 @@ export const Checkout: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
 
   if (isSuccess) {
     return (
@@ -188,8 +304,39 @@ export const Checkout: React.FC = () => {
 
           {/* Payment Method Selector Tiles */}
           <div className="p-6 rounded-3xl glass-panel border border-warm-200/80 dark:border-white/10 space-y-4">
-            <h3 className="font-bold text-base text-ink-950 dark:text-white">Choose how to pay</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base text-ink-950 dark:text-white">Choose how to pay</h3>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Razorpay Gateway Active</span>
+              </div>
+            </div>
             <div className="space-y-3">
+              <label
+                onClick={() => setPaymentMethod('razorpay')}
+                className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
+                  paymentMethod === 'razorpay'
+                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral'
+                    : 'border-warm-200 dark:border-white/10 hover:border-warm-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'razorpay'}
+                  onChange={() => setPaymentMethod('razorpay')}
+                  className="accent-sunset-coral"
+                />
+                <ShieldCheck className="w-5 h-5 text-sunset-coral" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-ink-900 dark:text-white">Razorpay Secure Checkout</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sunset-gradient text-white font-bold tracking-wider uppercase">Recommended</span>
+                  </div>
+                  <div className="text-xs text-ink-400">UPI, Cards, Netbanking, Cred & Wallets with instant verification</div>
+                </div>
+              </label>
+
               <label
                 onClick={() => setPaymentMethod('upi')}
                 className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
@@ -257,6 +404,7 @@ export const Checkout: React.FC = () => {
               </label>
             </div>
           </div>
+
 
           {/* Protection Note */}
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-warm-100/70 dark:bg-ink-900/70 border border-warm-200 dark:border-white/10 text-xs text-ink-600 dark:text-warm-300">

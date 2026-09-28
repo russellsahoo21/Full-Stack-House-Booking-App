@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
-export type PaymentMethod = 'upi' | 'card' | 'netbanking';
+export type PaymentMethod = 'razorpay' | 'upi' | 'card' | 'netbanking';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type BookingStatus = 'confirmed' | 'cancelled' | 'completed';
 
@@ -92,8 +92,8 @@ const BookingSchema = new Schema<IBooking>(
     },
     paymentMethod: {
       type: String,
-      enum: ['upi', 'card', 'netbanking'],
-      default: 'upi',
+      enum: ['razorpay', 'upi', 'card', 'netbanking'],
+      default: 'razorpay',
     },
     paymentStatus: {
       type: String,
