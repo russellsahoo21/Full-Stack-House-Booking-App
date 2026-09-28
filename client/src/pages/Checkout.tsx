@@ -18,6 +18,22 @@ import { formatPrice } from '@/lib/utils';
 import { listingsApi, bookingsApi, paymentsApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import confetti from 'canvas-confetti';
+import {
+  RazorpayLogo,
+  UpiLogo,
+  GooglePayBadge,
+  PhonePeBadge,
+  PaytmBadge,
+  CardBrandsLogo,
+  VisaBadge,
+  MastercardBadge,
+  RuPayBadge,
+  NetbankingLogo,
+  HdfcBadge,
+  SbiBadge,
+  IciciBadge,
+} from '@/components/payment/PaymentMethodIcons';
+
 
 const loadRazorpay = (): Promise<boolean> => {
   return new Promise((resolve) => {
@@ -312,11 +328,12 @@ export const Checkout: React.FC = () => {
               </div>
             </div>
             <div className="space-y-3">
+              {/* 1. Razorpay Secure Checkout */}
               <label
                 onClick={() => setPaymentMethod('razorpay')}
-                className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'razorpay'
-                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral'
+                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral shadow-sm'
                     : 'border-warm-200 dark:border-white/10 hover:border-warm-300'
                 }`}
               >
@@ -325,23 +342,28 @@ export const Checkout: React.FC = () => {
                   name="payment"
                   checked={paymentMethod === 'razorpay'}
                   onChange={() => setPaymentMethod('razorpay')}
-                  className="accent-sunset-coral"
+                  className="accent-sunset-coral shrink-0"
                 />
-                <ShieldCheck className="w-5 h-5 text-sunset-coral" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                <RazorpayLogo className="w-10 h-10" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-ink-900 dark:text-white">Razorpay Secure Checkout</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sunset-gradient text-white font-bold tracking-wider uppercase">Recommended</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sunset-gradient text-white font-bold tracking-wider uppercase">
+                      Recommended
+                    </span>
                   </div>
-                  <div className="text-xs text-ink-400">UPI, Cards, Netbanking, Cred & Wallets with instant verification</div>
+                  <div className="text-xs text-ink-400 mt-0.5">
+                    UPI, Cards, Netbanking, Cred & Wallets with instant verification
+                  </div>
                 </div>
               </label>
 
+              {/* 2. UPI */}
               <label
                 onClick={() => setPaymentMethod('upi')}
-                className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'upi'
-                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral'
+                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral shadow-sm'
                     : 'border-warm-200 dark:border-white/10 hover:border-warm-300'
                 }`}
               >
@@ -350,20 +372,30 @@ export const Checkout: React.FC = () => {
                   name="payment"
                   checked={paymentMethod === 'upi'}
                   onChange={() => setPaymentMethod('upi')}
-                  className="accent-sunset-coral"
+                  className="accent-sunset-coral shrink-0"
                 />
-                <Smartphone className="w-5 h-5 text-sunset-coral" />
-                <div className="flex-1">
-                  <div className="text-sm font-bold text-ink-900 dark:text-white">UPI (Google Pay, PhonePe, Paytm)</div>
-                  <div className="text-xs text-ink-400">Instant approval with zero surcharge</div>
+                <UpiLogo className="w-10 h-10" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-ink-900 dark:text-white">UPI Instant Transfer</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <GooglePayBadge />
+                      <PhonePeBadge />
+                      <PaytmBadge />
+                    </div>
+                  </div>
+                  <div className="text-xs text-ink-400 mt-0.5">
+                    Google Pay, PhonePe, Paytm, BHIM & all UPI apps
+                  </div>
                 </div>
               </label>
 
+              {/* 3. Cards */}
               <label
                 onClick={() => setPaymentMethod('card')}
-                className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'card'
-                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral'
+                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral shadow-sm'
                     : 'border-warm-200 dark:border-white/10 hover:border-warm-300'
                 }`}
               >
@@ -372,20 +404,30 @@ export const Checkout: React.FC = () => {
                   name="payment"
                   checked={paymentMethod === 'card'}
                   onChange={() => setPaymentMethod('card')}
-                  className="accent-sunset-coral"
+                  className="accent-sunset-coral shrink-0"
                 />
-                <CreditCard className="w-5 h-5 text-sunset-coral" />
-                <div className="flex-1">
-                  <div className="text-sm font-bold text-ink-900 dark:text-white">Credit or Debit Card</div>
-                  <div className="text-xs text-ink-400">Visa, Mastercard, RuPay, Amex</div>
+                <CardBrandsLogo className="w-10 h-10" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-ink-900 dark:text-white">Credit or Debit Card</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <VisaBadge />
+                      <MastercardBadge />
+                      <RuPayBadge />
+                    </div>
+                  </div>
+                  <div className="text-xs text-ink-400 mt-0.5">
+                    Visa, Mastercard, RuPay & Diners Club
+                  </div>
                 </div>
               </label>
 
+              {/* 4. Netbanking */}
               <label
                 onClick={() => setPaymentMethod('netbanking')}
-                className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'netbanking'
-                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral'
+                    ? 'border-sunset-coral bg-sunset-coral/5 ring-1 ring-sunset-coral shadow-sm'
                     : 'border-warm-200 dark:border-white/10 hover:border-warm-300'
                 }`}
               >
@@ -394,16 +436,26 @@ export const Checkout: React.FC = () => {
                   name="payment"
                   checked={paymentMethod === 'netbanking'}
                   onChange={() => setPaymentMethod('netbanking')}
-                  className="accent-sunset-coral"
+                  className="accent-sunset-coral shrink-0"
                 />
-                <Building2 className="w-5 h-5 text-sunset-coral" />
-                <div className="flex-1">
-                  <div className="text-sm font-bold text-ink-900 dark:text-white">Netbanking</div>
-                  <div className="text-xs text-ink-400">All major Indian scheduled banks</div>
+                <NetbankingLogo className="w-10 h-10" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-ink-900 dark:text-white">Netbanking</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <HdfcBadge />
+                      <SbiBadge />
+                      <IciciBadge />
+                    </div>
+                  </div>
+                  <div className="text-xs text-ink-400 mt-0.5">
+                    HDFC, SBI, ICICI, Axis and 50+ Indian banks
+                  </div>
                 </div>
               </label>
             </div>
           </div>
+
 
 
           {/* Protection Note */}
