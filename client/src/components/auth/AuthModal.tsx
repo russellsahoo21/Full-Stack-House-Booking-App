@@ -165,8 +165,7 @@ export const AuthModal: React.FC = () => {
 
               <div className="relative flex h-full flex-col justify-between p-10 text-white">
                 <div>
-                  <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                    <Sparkles className="h-4 w-4 text-orange-300" />
+                  <div className="mb-8 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
                     <span className="text-xs font-bold tracking-widest">
                       WAYFOUND
                     </span>
@@ -231,8 +230,7 @@ export const AuthModal: React.FC = () => {
             <div className="max-h-[90vh] overflow-y-auto p-6 sm:p-10">
               {/* Header */}
               <div className="mb-7 pr-8">
-                <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-sunset-gradient-subtle px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-sunset-coral">
-                  <Sparkles className="h-3.5 w-3.5" />
+                <div className="mb-4 inline-flex items-center rounded-full bg-sunset-gradient-subtle px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-sunset-coral">
                   Wayfound Member
                 </div>
 
