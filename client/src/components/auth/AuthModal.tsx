@@ -81,6 +81,7 @@ export const AuthModal: React.FC = () => {
 
   const handleFillDemo = (type: 'guest' | 'host') => {
     setError(null);
+    openAuthModal('login');
 
     if (type === 'guest') {
       setEmail('guest@wayfound.in');
@@ -90,6 +91,7 @@ export const AuthModal: React.FC = () => {
       setPassword('host123');
     }
   };
+
 
   const passwordChecks = [
     {
@@ -106,18 +108,21 @@ export const AuthModal: React.FC = () => {
     },
   ];
 
-  const switchMode = () => {
+  const switchModeTo = (mode: 'login' | 'register') => {
+    if (authModalMode === mode) return;
     setError(null);
     setName('');
     setEmail('');
     setPassword('');
     setPhone('');
     setShowPassword(false);
-
-    openAuthModal(
-      authModalMode === 'login' ? 'register' : 'login'
-    );
+    openAuthModal(mode);
   };
+
+  const switchMode = () => {
+    switchModeTo(authModalMode === 'login' ? 'register' : 'login');
+  };
+
 
   return (
     <AnimatePresence>
@@ -252,7 +257,34 @@ export const AuthModal: React.FC = () => {
                 </p>
               </div>
 
+              {/* Segmented Mode Switcher */}
+              <div className="mb-6 flex rounded-2xl bg-warm-100 p-1 dark:bg-ink-800/80">
+                <button
+                  type="button"
+                  onClick={() => switchModeTo('login')}
+                  className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all ${
+                    authModalMode === 'login'
+                      ? 'bg-white text-ink-950 shadow-sm dark:bg-ink-900 dark:text-white'
+                      : 'text-ink-500 hover:text-ink-900 dark:text-warm-400 dark:hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchModeTo('register')}
+                  className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all ${
+                    authModalMode === 'register'
+                      ? 'bg-white text-ink-950 shadow-sm dark:bg-ink-900 dark:text-white'
+                      : 'text-ink-500 hover:text-ink-900 dark:text-warm-400 dark:hover:text-white'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
               {/* Error */}
+
               <AnimatePresence>
                 {error && (
                   <motion.div

@@ -130,11 +130,18 @@ export async function apiRequest<T = any>(
 
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'omit', // Standard bearer token auth
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'omit', // Standard bearer token auth
+    });
+  } catch (netErr: any) {
+    throw new Error(
+      'Unable to connect to the backend server. Please ensure the backend is running on http://localhost:5000'
+    );
+  }
 
   const data = await res.json().catch(() => ({}));
 
@@ -142,6 +149,7 @@ export async function apiRequest<T = any>(
     const errorMsg = data?.message || data?.error || `Request failed with status ${res.status}`;
     throw new Error(errorMsg);
   }
+
 
   return data;
 }

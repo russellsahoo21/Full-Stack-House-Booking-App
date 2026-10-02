@@ -82,8 +82,16 @@ export const register = async (
       phone,
     } = req.body;
 
+    if (!name || !name.trim() || !email || !email.trim() || !password) {
+      return next(
+        new AppError('Please provide name, email, and password', 400)
+      );
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return next(
@@ -95,11 +103,11 @@ export const register = async (
     }
 
     const newUser = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password,
       avatar,
-      phone,
+      phone: phone ? phone.trim() : undefined,
       role:
         role && ['user', 'host'].includes(role)
           ? role
@@ -136,9 +144,11 @@ export const login = async (
       );
     }
 
-    const user = await User.findOne({ email }).select(
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select(
       '+password'
     );
+
 
     if (
       !user ||
