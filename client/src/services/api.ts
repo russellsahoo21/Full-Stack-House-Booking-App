@@ -3,8 +3,25 @@
  * Full integration with the Express & Mongoose Backend API
  */
 
-export const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+// Determine API base URL:
+// 1. If VITE_API_URL is provided in environment, use it.
+// 2. In production (import.meta.env.PROD), default to the live Render deployment:
+//    https://full-stack-house-booking-app.onrender.com/api
+// 3. In development (import.meta.env.DEV), default to local server: http://localhost:5000/api
+const getApiBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL?.trim();
+  const rawUrl = envUrl
+    ? envUrl
+    : (import.meta as any).env?.PROD
+    ? 'https://full-stack-house-booking-app.onrender.com/api'
+    : 'http://localhost:5000/api';
+
+  // Normalize: strip trailing slashes
+  const cleaned = rawUrl.replace(/\/+$/, '');
+  return cleaned.endsWith('/api') ? cleaned : `${cleaned}/api`;
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // ==========================================
 // Types
@@ -139,7 +156,7 @@ export async function apiRequest<T = any>(
     });
   } catch (netErr: any) {
     throw new Error(
-      'Unable to connect to the backend server. Please ensure the backend is running on http://localhost:5000'
+      `Unable to connect to the backend server (${API_BASE_URL}). Please verify your network connection and server status.`
     );
   }
 
