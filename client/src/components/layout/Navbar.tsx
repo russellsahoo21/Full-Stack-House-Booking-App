@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Globe, Menu, User, Search, LogOut } from 'lucide-react';
+import { Globe, Menu, User, Search, LogOut, Trash2 } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
@@ -207,13 +207,20 @@ export const Navbar: React.FC = () => {
                       className="absolute right-0 mt-2 w-64 rounded-2xl glass-panel shadow-xl py-2 z-50 border border-warm-200/80 dark:border-white/10"
                     >
                       {isAuthenticated && user ? (
-                        <div className="px-4 py-2.5 border-b border-warm-200/60 dark:border-white/5">
-                          <p className="text-sm font-bold text-ink-950 dark:text-white truncate">{user.name}</p>
+                        <Link
+                          to="/profile"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="block px-4 py-2.5 border-b border-warm-200/60 dark:border-white/5 hover:bg-warm-100/60 dark:hover:bg-ink-800/40 transition-colors group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-bold text-ink-950 dark:text-white truncate group-hover:text-sunset-coral transition-colors">{user.name}</p>
+                            <span className="inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sunset-gradient-subtle text-sunset-coral">
+                              {user.role === 'admin' ? 'Administrator' : user.role === 'host' ? 'Superhost' : 'Member'}
+                            </span>
+                          </div>
                           <p className="text-xs text-ink-500 dark:text-warm-400 truncate">{user.email}</p>
-                          <span className="inline-block mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-sunset-gradient-subtle text-sunset-coral">
-                            {user.role === 'admin' ? 'Administrator' : user.role === 'host' ? 'Superhost' : 'Member'}
-                          </span>
-                        </div>
+                          <p className="text-[11px] text-sunset-coral font-medium mt-1">Profile & Settings &rarr;</p>
+                        </Link>
                       ) : (
                         <div className="px-4 py-2 border-b border-warm-200/60 dark:border-white/5">
                           <p className="text-xs text-ink-400 dark:text-warm-400">Welcome to Wayfound</p>
@@ -236,7 +243,18 @@ export const Navbar: React.FC = () => {
                             </button>
                             <div className="my-1 border-t border-warm-200/60 dark:border-white/5" />
                           </>
-                        ) : null}
+                        ) : (
+                          <Link
+                            to="/profile"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center justify-between px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-medium"
+                          >
+                            <span>Profile & Settings</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200/70 dark:bg-ink-800 text-ink-600 dark:text-warm-300">
+                              Edit
+                            </span>
+                          </Link>
+                        )}
 
                         <Link
                           to="/trips"
@@ -287,13 +305,21 @@ export const Navbar: React.FC = () => {
                         {isAuthenticated && (
                           <>
                             <div className="my-1 border-t border-warm-200/60 dark:border-white/5" />
+                            <Link
+                              to="/profile#danger"
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/20 transition-colors font-medium"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete account</span>
+                            </Link>
                             <button
                               type="button"
                               onClick={async () => {
                                 setIsProfileMenuOpen(false);
                                 await logout();
                               }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors font-medium"
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-medium"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Log out</span>

@@ -10,11 +10,14 @@ interface AuthContextType {
   authModalMode: 'login' | 'register';
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   openAuthModal: (mode?: 'login' | 'register') => void;
   closeAuthModal: () => void;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -76,6 +79,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthModalOpen(false);
   };
 
+  const updateProfile = async (updates: Partial<User>) => {
+    const res = await authApi.updateProfile(updates);
+    const updated = (res as any)?.user || (res as any)?.data;
+    if (updated) {
+      setUser(updated);
+    }
+  };
+
+  const deleteAccount = async () => {
+    await authApi.deleteAccount();
+    setUser(null);
+    setToken(null);
+  };
+
   const logout = async () => {
     await authApi.logout();
     setUser(null);
@@ -102,6 +119,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authModalMode,
         login,
         register,
+        updateProfile,
+        deleteAccount,
         logout,
         refreshUser,
         openAuthModal,
@@ -110,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     >
       {children}
     </AuthContext.Provider>
+
   );
 };
 

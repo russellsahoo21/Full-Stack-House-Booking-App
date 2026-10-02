@@ -7,6 +7,7 @@ import {
   resetPassword,
   getMe,
   updateProfile,
+  deleteAccount,
   toggleWishlist,
   getWishlist,
   logout,
@@ -39,6 +40,11 @@ router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 
 router.patch('/profile', protect, updateProfile);
+
+router.delete('/profile', protect, deleteAccount);
+
+router.delete('/account', protect, deleteAccount);
+
 
 // ======================================================
 // WISHLIST ROUTES

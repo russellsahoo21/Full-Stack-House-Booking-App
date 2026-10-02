@@ -207,6 +207,15 @@ export const authApi = {
     return { ...res, user, data: user };
   },
 
+  async deleteAccount(): Promise<{ success: boolean; message: string }> {
+    const res = await apiRequest<{ success: boolean; message: string }>('/auth/account', {
+      method: 'DELETE',
+    });
+    localStorage.removeItem('wayfound_token');
+    return res;
+  },
+
+
   async getWishlist(): Promise<{ status: string; wishlist: any[] }> {
     return apiRequest<{ status: string; wishlist: any[] }>('/auth/wishlist');
   },

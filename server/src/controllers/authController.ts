@@ -401,21 +401,28 @@ export const updateProfile = async (
       name,
       avatar,
       phone,
+      bio,
     } = req.body;
+
+    const updateFields: Record<string, any> = {};
+    if (name !== undefined) updateFields.name = name.trim();
+    if (avatar !== undefined) updateFields.avatar = avatar;
+    if (phone !== undefined) updateFields.phone = phone ? phone.trim() : '';
+    if (bio !== undefined) updateFields.bio = bio ? bio.trim() : '';
 
     const user =
       await User.findByIdAndUpdate(
         req.user?._id,
-        {
-          name,
-          avatar,
-          phone,
-        },
+        updateFields,
         {
           new: true,
           runValidators: true,
         }
       );
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
 
     res.status(200).json({
       success: true,
@@ -426,6 +433,65 @@ export const updateProfile = async (
     next(error);
   }
 };
+
+// ======================================================
+// DELETE ACCOUNT
+// ======================================================
+
+// @desc    Delete user account
+// @route   DELETE /api/auth/account
+// @access  Private
+export const deleteAccount = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return next(new AppError('User not authenticated', 401));
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    // Protect permanent demo accounts from deletion
+    const protectedEmails = [
+      'guest@wayfound.in',
+      'arjun@wayfound.in',
+      'traveler@wayfound.stay',
+      'host@wayfound.stay',
+      'admin@wayfound.stay',
+    ];
+
+    if (protectedEmails.includes(user.email.toLowerCase())) {
+      return next(
+        new AppError(
+          'Protected demo accounts cannot be deleted. Please register your own personal account to test deleting.',
+          403
+        )
+      );
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    // Clear authentication cookie
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 5 * 1000),
+      httpOnly: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 // ======================================================
 // TOGGLE WISHLIST

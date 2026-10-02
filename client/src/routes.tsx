@@ -14,6 +14,7 @@ import ExperienceDetail from '@/pages/ExperienceDetail';
 import Services from '@/pages/Services';
 import ServiceDetail from '@/pages/ServiceDetail';
 import Trips from '@/pages/Trips';
+import Profile from '@/pages/Profile';
 import NotFound from '@/pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -24,6 +25,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <Home />,
+      },
+      {
+        path: 'profile',
+        element: <Profile />,
       },
       {
         path: 'search',

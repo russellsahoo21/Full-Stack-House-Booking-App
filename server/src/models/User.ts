@@ -8,6 +8,7 @@ export interface IUser {
   password?: string;
   avatar: string;
   phone?: string;
+  bio?: string;
   role: 'user' | 'host' | 'admin';
   wishlist: string[];
 
@@ -58,6 +59,12 @@ const UserSchema = new Schema<IUser>(
     phone: {
       type: String,
       trim: true,
+    },
+
+    bio: {
+      type: String,
+      maxlength: [500, 'Bio cannot exceed 500 characters'],
+      default: '',
     },
 
     role: {
