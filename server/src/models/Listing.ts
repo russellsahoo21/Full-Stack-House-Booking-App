@@ -16,11 +16,18 @@ export type CategoryId =
 export type Vibe = 'hills' | 'beach' | 'heritage' | 'workation';
 
 export type PropertyType =
+  | 'House'
   | 'Villa'
   | 'Cottage'
   | 'Haveli'
   | 'Apartment'
+  | 'Flat/apartment'
   | 'Houseboat'
+  | 'Boat'
+  | 'Barn'
+  | 'Bed & breakfast'
+  | 'Cabin'
+  | 'Campervan'
   | 'Tent'
   | 'Treehouse'
   | 'Chalet';
@@ -76,6 +83,7 @@ export interface IListing {
   }>;
   houseRules: string[];
   cancellationPolicy: string;
+  status: 'Published' | 'Pending Approval' | 'Draft' | 'Archived';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,7 +127,23 @@ const ListingSchema = new Schema<IListing>(
     propertyType: {
       type: String,
       required: true,
-      enum: ['Villa', 'Cottage', 'Haveli', 'Apartment', 'Houseboat', 'Tent', 'Treehouse', 'Chalet'],
+      enum: [
+        'House',
+        'Villa',
+        'Cottage',
+        'Haveli',
+        'Apartment',
+        'Flat/apartment',
+        'Houseboat',
+        'Boat',
+        'Barn',
+        'Bed & breakfast',
+        'Cabin',
+        'Campervan',
+        'Tent',
+        'Treehouse',
+        'Chalet',
+      ],
     },
     roomType: {
       type: String,
@@ -219,6 +243,12 @@ const ListingSchema = new Schema<IListing>(
     cancellationPolicy: {
       type: String,
       default: 'Free cancellation up to 48 hours before check-in',
+    },
+    status: {
+      type: String,
+      enum: ['Published', 'Pending Approval', 'Draft', 'Archived'],
+      default: 'Pending Approval',
+      index: true,
     },
   },
   {

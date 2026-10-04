@@ -14,6 +14,8 @@ export function useLenis() {
       smoothWheel: true,
     });
 
+    (window as any).__lenis = lenis;
+
     function raf(time: number) {
       lenis.raf(time);
       requestAnimationFrame(raf);
@@ -24,6 +26,7 @@ export function useLenis() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      delete (window as any).__lenis;
     };
   }, []);
 }

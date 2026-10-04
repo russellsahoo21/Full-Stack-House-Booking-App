@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -47,6 +48,7 @@ const FAQS = [
 ];
 
 export const Host: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0]);
   const [nightsPerWeek, setNightsPerWeek] = useState(4);
   const [spaceType, setSpaceType] = useState<'entire' | 'private'>('entire');
@@ -82,7 +84,7 @@ export const Host: React.FC = () => {
 
             <div className="pt-2 flex flex-wrap items-center gap-4">
               <button
-                onClick={() => alert("Hosting onboarding begins! Setup your listing in 5 minutes.")}
+                onClick={() => navigate('/become-a-host')}
                 className="px-8 py-4 rounded-full bg-sunset-gradient text-white text-sm font-bold shadow-md hover:shadow-glow-sunset hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
               >
                 <span>Start hosting today</span>

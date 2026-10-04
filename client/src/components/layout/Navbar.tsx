@@ -139,7 +139,7 @@ export const Navbar: React.FC = () => {
           {/* Right Side Actions */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             <Link
-              to="/host"
+              to="/become-a-host"
               className={`hidden sm:inline-flex items-center px-4 py-2 text-xs font-semibold rounded-full transition-colors ${
                 showGlass
                   ? 'text-ink-800 dark:text-warm-100 hover:bg-warm-200/60 dark:hover:bg-ink-800'
@@ -252,6 +252,22 @@ export const Navbar: React.FC = () => {
                             <span>Profile & Settings</span>
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200/70 dark:bg-ink-800 text-ink-600 dark:text-warm-300">
                               Edit
+                            </span>
+                          </Link>
+                        )}
+
+                        {isAuthenticated && (user?.role === 'admin' || user?.email?.includes('admin')) && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center justify-between px-4 py-2 text-sm text-[#b52603] dark:text-[#ff5a36] hover:bg-[#ffdad6]/40 dark:hover:bg-[#b52603]/10 transition-colors font-bold"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                              <span>Admin Portal</span>
+                            </span>
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-[#b52603] text-white">
+                              Portal
                             </span>
                           </Link>
                         )}

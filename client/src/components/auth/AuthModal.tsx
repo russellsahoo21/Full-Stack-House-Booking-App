@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -25,6 +26,7 @@ export const AuthModal: React.FC = () => {
     login,
     register,
   } = useAuth();
+  const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -60,15 +62,21 @@ export const AuthModal: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      let loggedUser = null;
       if (authModalMode === 'login') {
-        await login(email.trim(), password);
+        loggedUser = await login(email.trim(), password);
       } else {
-        await register(
+        loggedUser = await register(
           name.trim(),
           email.trim(),
           password,
           phone.trim() || undefined
         );
+      }
+
+      // If the logged in account is an Administrator, navigate directly to Admin Command Center
+      if (loggedUser && (loggedUser.role === 'admin' || loggedUser.email?.includes('admin'))) {
+        navigate('/admin');
       }
     } catch (err: any) {
       setError(
@@ -79,16 +87,19 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleFillDemo = (type: 'guest' | 'host') => {
+  const handleFillDemo = (type: 'guest' | 'host' | 'admin') => {
     setError(null);
     openAuthModal('login');
 
     if (type === 'guest') {
       setEmail('guest@wayfound.in');
       setPassword('guest123');
-    } else {
+    } else if (type === 'host') {
       setEmail('arjun@wayfound.in');
       setPassword('host123');
+    } else {
+      setEmail('admin@wayfound.stay');
+      setPassword('adminpassword123');
     }
   };
 
@@ -232,7 +243,7 @@ export const AuthModal: React.FC = () => {
             </div>
 
             {/* RIGHT FORM PANEL */}
-            <div className="max-h-[90vh] overflow-y-auto p-6 sm:p-10">
+            <div className="max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-10">
               {/* Header */}
               <div className="mb-7 pr-8">
                 <div className="mb-4 inline-flex items-center rounded-full bg-sunset-gradient-subtle px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-sunset-coral">
@@ -500,13 +511,13 @@ export const AuthModal: React.FC = () => {
                   <div className="h-px flex-1 bg-warm-200 dark:bg-white/10" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => handleFillDemo('guest')}
                     className="rounded-xl border border-warm-200 bg-white py-2.5 text-xs font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-sunset-coral hover:bg-warm-50 dark:border-white/10 dark:bg-ink-800 dark:text-warm-200"
                   >
-                    👤 Guest Demo
+                    👤 Guest
                   </button>
 
                   <button
@@ -514,7 +525,15 @@ export const AuthModal: React.FC = () => {
                     onClick={() => handleFillDemo('host')}
                     className="rounded-xl border border-warm-200 bg-white py-2.5 text-xs font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-sunset-coral hover:bg-warm-50 dark:border-white/10 dark:bg-ink-800 dark:text-warm-200"
                   >
-                    ⭐ Host Demo
+                    ⭐ Host
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleFillDemo('admin')}
+                    className="rounded-xl border border-[#ffdad2] bg-[#fff5f2] dark:bg-[#201518] py-2.5 text-xs font-bold text-[#b52603] dark:text-[#ff5a36] transition-all hover:-translate-y-0.5 hover:border-[#b52603] shadow-sm"
+                  >
+                    🛡️ Admin
                   </button>
                 </div>
               </div>

@@ -285,6 +285,20 @@ export const listingsApi = {
       `/listings/nearby?lat=${lat}&lng=${lng}&maxDistance=${maxDistanceKm}`
     );
   },
+
+  async createListing(payload: any): Promise<{ success: boolean; data: any; message?: string }> {
+    return apiRequest<{ success: boolean; data: any; message?: string }>('/listings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateListing(id: string, payload: any): Promise<{ success: boolean; data: any }> {
+    return apiRequest<{ success: boolean; data: any }>(`/listings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 // ==========================================
@@ -445,4 +459,252 @@ export const paymentsApi = {
     });
   },
 };
+
+// ==========================================
+// 9. Admin Portal API
+// ==========================================
+export const adminApi = {
+  async getDashboard(range: '7D' | '30D' | '3M' | '12M' = '30D'): Promise<{
+    success: boolean;
+    data: {
+      kpis: {
+        grossRevenue: number;
+        grossGrowth: string;
+        platformMargin: number;
+        activeBookings: number;
+        bookingsGrowth: string;
+        confirmedCount: number;
+        pendingCount: number;
+        cancelledCount: number;
+        curatedInventory: number;
+        inventoryGrowth: string;
+        registeredUsers: number;
+        communityGrowth: string;
+        hostsCount: number;
+        travelersCount: number;
+        occupancyPercentage: number;
+      };
+      revenueVelocity: {
+        range: string;
+        labels: string[];
+        currentCycle: number[];
+        previousCycle: number[];
+        peakAmount: number;
+        projectedMonthlyClose: number;
+      };
+      recentBookings: any[];
+      liveActivities: any[];
+      systemHealth: {
+        database: string;
+        uptime: number;
+        version: string;
+        services: string;
+      };
+    };
+  }> {
+    return apiRequest(`/admin/dashboard?range=${range}`);
+  },
+
+  async getBookings(params?: {
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+  }): Promise<{
+    success: boolean;
+    count: number;
+    total: number;
+    stats: {
+      totalRevenue: number;
+      confirmed: number;
+      pending: number;
+      cancelled: number;
+    };
+    page: number;
+    totalPages: number;
+    data: any[];
+  }> {
+    const q = new URLSearchParams();
+    if (params) {
+      if (params.search) q.set('search', params.search);
+      if (params.status) q.set('status', params.status);
+      if (params.paymentStatus) q.set('paymentStatus', params.paymentStatus);
+      if (params.page) q.set('page', params.page.toString());
+      if (params.limit) q.set('limit', params.limit.toString());
+      if (params.sort) q.set('sort', params.sort);
+    }
+    const qStr = q.toString();
+    return apiRequest(`/admin/bookings${qStr ? `?${qStr}` : ''}`);
+  },
+
+  async updateBookingStatus(
+    id: string,
+    updates: { status?: string; paymentStatus?: string; reason?: string }
+  ): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest(`/admin/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async getProperties(params?: {
+    search?: string;
+    category?: string;
+    city?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+  }): Promise<{
+    success: boolean;
+    count: number;
+    total: number;
+    page: number;
+    totalPages: number;
+    data: any[];
+  }> {
+    const q = new URLSearchParams();
+    if (params) {
+      if (params.search) q.set('search', params.search);
+      if (params.category) q.set('category', params.category);
+      if (params.city) q.set('city', params.city);
+      if (params.page) q.set('page', params.page.toString());
+      if (params.limit) q.set('limit', params.limit.toString());
+      if (params.sort) q.set('sort', params.sort);
+    }
+    const qStr = q.toString();
+    return apiRequest(`/admin/properties${qStr ? `?${qStr}` : ''}`);
+  },
+
+  async updatePropertyStatus(
+    id: string,
+    updates: { status?: string; guestFavorite?: boolean }
+  ): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest(`/admin/properties/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteProperty(id: string): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/admin/properties/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getUsers(params?: {
+    search?: string;
+    role?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+  }): Promise<{
+    success: boolean;
+    count: number;
+    total: number;
+    stats: {
+      totalUsers: number;
+      hostsCount: number;
+      adminsCount: number;
+      guestsCount: number;
+    };
+    page: number;
+    totalPages: number;
+    data: any[];
+  }> {
+    const q = new URLSearchParams();
+    if (params) {
+      if (params.search) q.set('search', params.search);
+      if (params.role) q.set('role', params.role);
+      if (params.status) q.set('status', params.status);
+      if (params.page) q.set('page', params.page.toString());
+      if (params.limit) q.set('limit', params.limit.toString());
+      if (params.sort) q.set('sort', params.sort);
+    }
+    const qStr = q.toString();
+    return apiRequest(`/admin/users${qStr ? `?${qStr}` : ''}`);
+  },
+
+  async updateUserRole(id: string, role: string): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest(`/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  async updateUserStatus(id: string, status: string): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async deleteUser(id: string): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getReviews(params?: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    success: boolean;
+    count: number;
+    total: number;
+    page: number;
+    totalPages: number;
+    data: any[];
+  }> {
+    const q = new URLSearchParams();
+    if (params) {
+      if (params.search) q.set('search', params.search);
+      if (params.status) q.set('status', params.status);
+      if (params.page) q.set('page', params.page.toString());
+      if (params.limit) q.set('limit', params.limit.toString());
+    }
+    const qStr = q.toString();
+    return apiRequest(`/admin/reviews${qStr ? `?${qStr}` : ''}`);
+  },
+
+  async updateReviewStatus(
+    id: string,
+    updates: { status?: string; flagReason?: string }
+  ): Promise<{ success: boolean; message: string; data: any }> {
+    return apiRequest(`/admin/reviews/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteReview(id: string): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/admin/reviews/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async exportReport(type: 'bookings' | 'properties'): Promise<void> {
+    const token = localStorage.getItem('wayfound_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_BASE_URL}/admin/export/${type}`, { headers });
+    if (!res.ok) throw new Error('Failed to export CSV report');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wayfound_${type}_audit.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+};
+
 

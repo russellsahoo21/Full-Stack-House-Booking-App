@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 import { User } from '../models/User.js';
+import { Admin } from '../models/Admin.js';
 import { Listing } from '../models/Listing.js';
 import { AppError } from '../utils/appError.js';
 import { AuthRequest } from '../middleware/auth.js';
@@ -160,6 +161,53 @@ export const login = async (
           401
         )
       );
+    }
+
+    // If logging in user is an admin, store / record session in Admin DB collection
+    if (user.role === 'admin') {
+      try {
+        const clientIp =
+          (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+          req.socket?.remoteAddress ||
+          '127.0.0.1';
+        const userAgent = req.headers['user-agent'] || 'Browser Client';
+        const now = new Date();
+
+        await Admin.findOneAndUpdate(
+          { email: user.email },
+          {
+            $set: {
+              userId: user._id,
+              name: user.name,
+              email: user.email,
+              avatar: user.avatar,
+              phone: user.phone,
+              role: 'admin',
+              lastLoginAt: now,
+              lastLoginIp: clientIp,
+              lastLoginUserAgent: userAgent,
+              status: 'active',
+            },
+            $inc: { loginCount: 1 },
+            $push: {
+              loginHistory: {
+                $each: [
+                  {
+                    timestamp: now,
+                    ip: clientIp,
+                    userAgent,
+                    status: 'success',
+                  },
+                ],
+                $slice: -50, // Keep latest 50 login events
+              },
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (adminErr) {
+        console.error('Failed to log admin login into Admin schema:', adminErr);
+      }
     }
 
     sendTokenResponse(user, 200, res);

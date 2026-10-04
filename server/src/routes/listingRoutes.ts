@@ -19,8 +19,8 @@ router.get('/vibes', getListingsByVibe);
 router.get('/trending', getTrendingListings);
 router.get('/:id', getListingById);
 
-router.post('/', protect, authorize('host', 'admin'), createListing);
-router.put('/:id', protect, authorize('host', 'admin'), updateListing);
+router.post('/', protect, authorize('user', 'host', 'admin'), createListing);
+router.put('/:id', protect, authorize('user', 'host', 'admin'), updateListing);
 router.delete('/:id', protect, authorize('admin'), deleteListing);
 
 export default router;

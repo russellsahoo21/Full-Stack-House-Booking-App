@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -45,6 +45,47 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Lock background page and smooth scroll completely while review modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Pause Lenis smooth-scroll
+    const lenis = (window as any).__lenis;
+    if (lenis && typeof lenis.stop === 'function') {
+      lenis.stop();
+    }
+
+    const scrollY = window.scrollY;
+    const originalBodyStyle = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow,
+    };
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
+    // Freeze body in place so background cannot move at all
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.position = originalBodyStyle.position;
+      document.body.style.top = originalBodyStyle.top;
+      document.body.style.width = originalBodyStyle.width;
+      document.body.style.overflow = originalBodyStyle.overflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      window.scrollTo(0, scrollY);
+
+      // Resume Lenis smooth-scroll
+      if (lenis && typeof lenis.start === 'function') {
+        lenis.start();
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -107,7 +148,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -123,10 +164,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
-          className="relative w-full max-w-xl bg-white dark:bg-ink-950 rounded-3xl border border-warm-200/80 dark:border-white/10 shadow-2xl overflow-hidden z-10 my-8"
+          className="relative w-full max-w-xl max-h-[90vh] flex flex-col bg-white dark:bg-ink-950 rounded-3xl border border-warm-200/80 dark:border-white/10 shadow-2xl overflow-hidden z-10 my-auto"
         >
-          {/* Header */}
-          <div className="relative p-6 border-b border-warm-200/60 dark:border-white/10 flex items-center justify-between">
+          {/* Header (fixed top) */}
+          <div className="shrink-0 relative p-5 sm:p-6 border-b border-warm-200/60 dark:border-white/10 flex items-center justify-between bg-white dark:bg-ink-950 z-10">
             <div className="flex items-center gap-3">
               {listingImage ? (
                 <img
@@ -171,20 +212,21 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {error && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-300">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
+                {error && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-300">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
               {/* Overall Star Rating */}
-              <div className="text-center space-y-2 py-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-ink-400 dark:text-warm-400 block">
+              <div className="text-center space-y-1 py-0">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-ink-400 dark:text-warm-400 block">
                   Overall Experience
                 </label>
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1.5">
                   {[1, 2, 3, 4, 5].map((star) => {
                     const active = (hoverRating !== null ? hoverRating : rating) >= star;
                     return (
@@ -194,10 +236,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                         onMouseEnter={() => setHoverRating(star)}
                         onMouseLeave={() => setHoverRating(null)}
                         onClick={() => setRating(star)}
-                        className="p-1.5 focus:outline-none transition-transform active:scale-90"
+                        className="p-1 focus:outline-none transition-transform active:scale-90"
                       >
                         <Star
-                          className={`w-8 h-8 transition-colors ${
+                          className={`w-7 h-7 transition-colors ${
                             active
                               ? 'text-sunset-amber fill-sunset-amber'
                               : 'text-warm-300 dark:text-ink-700 stroke-1'
@@ -207,13 +249,13 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     );
                   })}
                 </div>
-                <p className="text-xs font-semibold text-sunset-coral min-h-[18px]">
+                <p className="text-xs font-semibold text-sunset-coral min-h-[16px]">
                   {ratingDescriptions[hoverRating || rating]}
                 </p>
               </div>
 
               {/* Sub-Ratings Slider Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-warm-200/60 dark:border-white/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-warm-200/60 dark:border-white/10">
                 {[
                   { label: 'Cleanliness', val: cleanliness, setVal: setCleanliness },
                   { label: 'Accuracy of listing', val: accuracy, setVal: setAccuracy },
@@ -221,7 +263,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   { label: 'Location & surroundings', val: locationRating, setVal: setLocationRating },
                   { label: 'Value for money', val: value, setVal: setValue },
                 ].map((item) => (
-                  <div key={item.label} className="space-y-1.5">
+                  <div key={item.label} className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-semibold text-ink-800 dark:text-warm-200">
                         {item.label}
@@ -241,59 +283,61 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                 ))}
               </div>
 
-              {/* Guest Display Name */}
-              <div>
-                <label className="block text-xs font-semibold text-ink-700 dark:text-warm-300 mb-1.5">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="e.g. Priya Sharma"
-                  className="w-full px-4 py-2.5 rounded-xl border border-warm-300 dark:border-white/15 bg-white dark:bg-ink-900 text-sm text-ink-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-sunset-coral/50"
-                />
-              </div>
+              {/* Guest Display Name & Comment */}
+              <div className="grid grid-cols-1 gap-3 pt-1 border-t border-warm-200/60 dark:border-white/10">
+                <div>
+                  <label className="block text-xs font-semibold text-ink-700 dark:text-warm-300 mb-1">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="e.g. Priya Sharma"
+                    className="w-full px-3.5 py-2 rounded-xl border border-warm-300 dark:border-white/15 bg-white dark:bg-ink-900 text-xs text-ink-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-sunset-coral/50"
+                  />
+                </div>
 
-              {/* Comment Textarea */}
-              <div>
-                <label className="block text-xs font-semibold text-ink-700 dark:text-warm-300 mb-1.5">
-                  Share Your Story
-                </label>
-                <textarea
-                  rows={4}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="What made your stay memorable? Share insights about the property, host hospitality, sunrise views, or favorite local spots..."
-                  className="w-full px-4 py-3 rounded-2xl border border-warm-300 dark:border-white/15 bg-white dark:bg-ink-900 text-sm text-ink-950 dark:text-white placeholder:text-ink-400 dark:placeholder:text-warm-500 focus:outline-none focus:ring-2 focus:ring-sunset-coral/50 resize-none leading-relaxed"
-                />
-                <span className="text-[11px] text-ink-400 dark:text-warm-500 mt-1 block">
-                  Minimum 10 characters ({comment.length} entered)
-                </span>
+                <div>
+                  <label className="block text-xs font-semibold text-ink-700 dark:text-warm-300 mb-1">
+                    Share Your Story
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="What made your stay memorable? Share insights about the stay, hospitality, or amenities..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-warm-300 dark:border-white/15 bg-white dark:bg-ink-900 text-xs text-ink-950 dark:text-white placeholder:text-ink-400 dark:placeholder:text-warm-500 focus:outline-none focus:ring-2 focus:ring-sunset-coral/50 resize-none leading-relaxed"
+                  />
+                  <span className="text-[10px] text-ink-400 dark:text-warm-500 mt-0.5 block">
+                    Minimum 10 characters ({comment.length} entered)
+                  </span>
+                </div>
               </div>
+            </div>
 
-              {/* Submit CTA */}
-              <div className="pt-2 flex items-center justify-between gap-3">
-                <span className="flex items-center gap-1.5 text-xs text-ink-500 dark:text-warm-400">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" /> Verified Guest Review
-                </span>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2.5 rounded-full bg-sunset-gradient text-white text-xs font-bold hover:shadow-glow-sunset active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Publishing...</span>
-                    </>
-                  ) : (
-                    <span>Submit Review</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
+            {/* Sticky Submit Footer Bar */}
+            <div className="shrink-0 p-4 sm:px-6 bg-warm-50/90 dark:bg-ink-900/95 border-t border-warm-200/60 dark:border-white/10 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1.5 text-xs text-ink-500 dark:text-warm-400 font-medium">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" /> Verified Guest Review
+              </span>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2.5 rounded-full bg-sunset-gradient text-white text-xs font-bold hover:shadow-glow-sunset active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2 shadow-md cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Publishing...</span>
+                  </>
+                ) : (
+                  <span>Submit Review</span>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
         </motion.div>
       </div>
     </AnimatePresence>

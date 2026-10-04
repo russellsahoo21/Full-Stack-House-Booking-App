@@ -8,8 +8,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'register';
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User | null>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<User | null>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   deleteAccount: () => Promise<void>;
   logout: () => Promise<void>;
@@ -63,20 +63,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     const res = await authApi.login({ email, password });
     const currentUser = (res as any)?.user || (res as any)?.data;
     setUser(currentUser);
     setToken(res.token);
     setIsAuthModalOpen(false);
+    return currentUser || null;
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
+  const register = async (name: string, email: string, password: string, phone?: string): Promise<User | null> => {
     const res = await authApi.register({ name, email, password, phone });
     const currentUser = (res as any)?.user || (res as any)?.data;
     setUser(currentUser);
     setToken(res.token);
     setIsAuthModalOpen(false);
+    return currentUser || null;
   };
 
   const updateProfile = async (updates: Partial<User>) => {
@@ -136,7 +138,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return safe default state instead of crashing in case of HMR timing or boundary issues
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isAuthModalOpen: false,
+      authModalMode: 'login',
+      login: async () => (null as any),
+      register: async () => (null as any),
+      logout: async () => {},
+      refreshUser: async () => {},
+      updateProfile: async () => {},
+      deleteAccount: async () => {},
+      openAuthModal: () => {},
+      closeAuthModal: () => {},
+    };
   }
   return context;
 };

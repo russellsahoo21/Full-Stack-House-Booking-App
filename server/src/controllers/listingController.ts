@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { Listing } from '../models/Listing.js';
 import { Review } from '../models/Review.js';
+import { Host } from '../models/Host.js';
+import { User } from '../models/User.js';
 import { AppError } from '../utils/appError.js';
 import { AuthRequest } from '../middleware/auth.js';
 
@@ -29,27 +31,46 @@ export const getListings = async (req: Request, res: Response, next: NextFunctio
     } = req.query;
 
     const query: any = {};
+    const andConditions: any[] = [];
+
+    const statusFilter = req.query.status;
+    if (statusFilter && statusFilter !== 'all') {
+      andConditions.push({ status: String(statusFilter) });
+    } else if (!statusFilter) {
+      // By default, public queries only see Published properties or listings where status doesn't exist yet (legacy)
+      andConditions.push({
+        $or: [{ status: 'Published' }, { status: { $exists: false } }],
+      });
+    }
 
     // Destination / Text Search
     if (search) {
       const searchRegex = new RegExp(String(search), 'i');
-      query.$or = [
-        { title: searchRegex },
-        { tagline: searchRegex },
-        { description: searchRegex },
-        { 'location.city': searchRegex },
-        { 'location.state': searchRegex },
-        { 'location.area': searchRegex },
-      ];
+      andConditions.push({
+        $or: [
+          { title: searchRegex },
+          { tagline: searchRegex },
+          { description: searchRegex },
+          { 'location.city': searchRegex },
+          { 'location.state': searchRegex },
+          { 'location.area': searchRegex },
+        ],
+      });
     }
 
     if (destination) {
       const destRegex = new RegExp(String(destination), 'i');
-      query.$or = [
-        { 'location.city': destRegex },
-        { 'location.state': destRegex },
-        { 'location.area': destRegex },
-      ];
+      andConditions.push({
+        $or: [
+          { 'location.city': destRegex },
+          { 'location.state': destRegex },
+          { 'location.area': destRegex },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     // Category filter
@@ -269,6 +290,42 @@ export const getTrendingListings = async (_req: Request, res: Response, next: Ne
 export const createListing = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const listingData = { ...req.body };
+    const user = req.user;
+
+    // Resolve or automatically create Host profile for user
+    if (!listingData.hostId && user) {
+      let host = await Host.findOne({ userId: user._id });
+      if (!host) {
+        host = await Host.create({
+          userId: user._id,
+          name: user.name || 'Wayfound Host',
+          avatar: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+          bio: `Host on Wayfound since ${new Date().getFullYear()}. Passionate about curated boutique stays and mindful travel.`,
+          isSuperhost: false,
+          responseRate: 100,
+          responseTime: 'within an hour',
+        });
+      }
+      listingData.hostId = host._id;
+
+      // Update user role to host if currently user
+      if (user.role === 'user') {
+        await User.findByIdAndUpdate(user._id, { role: 'host' });
+      }
+    }
+
+    // Default status to 'Pending Approval' unless specified (or if saving draft)
+    if (!listingData.status) {
+      listingData.status = 'Pending Approval';
+    }
+
+    // Default category & vibe if omitted
+    if (!listingData.category || !Array.isArray(listingData.category) || listingData.category.length === 0) {
+      listingData.category = ['villas'];
+    }
+    if (!listingData.vibe) {
+      listingData.vibe = 'hills';
+    }
 
     // Auto-generate slug from title if not provided
     if (!listingData.slug && listingData.title) {
@@ -278,11 +335,32 @@ export const createListing = async (req: AuthRequest, res: Response, next: NextF
         .replace(/(^-|-$)+/g, '') + '-' + Date.now().toString().slice(-4);
     }
 
+    // Ensure price structure is populated
+    if (typeof listingData.price === 'number') {
+      listingData.price = {
+        perNight: listingData.price,
+        cleaningFee: 1200,
+        serviceFeePercent: 12,
+        currency: 'INR',
+      };
+    } else if (listingData.price && !listingData.price.currency) {
+      listingData.price.currency = 'INR';
+      listingData.price.cleaningFee = listingData.price.cleaningFee || 1200;
+      listingData.price.serviceFeePercent = listingData.price.serviceFeePercent || 12;
+    }
+
+    // Ensure location has coordinates
+    if (listingData.location && (listingData.location.lat === undefined || listingData.location.lng === undefined)) {
+      listingData.location.lat = 15.4909;
+      listingData.location.lng = 73.8278;
+    }
+
     const listing = await Listing.create(listingData);
 
     res.status(201).json({
       success: true,
       data: listing,
+      message: 'Listing created successfully and submitted for admin review.',
     });
   } catch (error) {
     next(error);

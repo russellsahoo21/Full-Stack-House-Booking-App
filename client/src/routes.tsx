@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 
 // Direct imports for instant, reliable route transitions
@@ -9,6 +9,7 @@ import StayDetail from '@/pages/StayDetail';
 import Wishlists from '@/pages/Wishlists';
 import Checkout from '@/pages/Checkout';
 import Host from '@/pages/Host';
+import BecomeAHost from '@/pages/BecomeAHost';
 import Experiences from '@/pages/Experiences';
 import ExperienceDetail from '@/pages/ExperienceDetail';
 import Services from '@/pages/Services';
@@ -17,7 +18,62 @@ import Trips from '@/pages/Trips';
 import Profile from '@/pages/Profile';
 import NotFound from '@/pages/NotFound';
 
+// Admin Portal Imports
+import { AdminLayout } from '@/components/layout/AdminLayout';
+import { AdminRoute } from '@/components/auth/AdminRoute';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminProperties from '@/pages/admin/AdminProperties';
+import AdminBookings from '@/pages/admin/AdminBookings';
+import AdminUsers from '@/pages/admin/AdminUsers';
+import AdminReviews from '@/pages/admin/AdminReviews';
+
 export const router = createBrowserRouter([
+  {
+    path: '/admi',
+    element: <Navigate to="/admin" replace />,
+  },
+  {
+    path: '/admin',
+    element: (
+      <AdminRoute>
+        <AdminLayout />
+      </AdminRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />,
+      },
+      {
+        path: 'dashboard',
+        element: <AdminDashboard />,
+      },
+      {
+        path: 'properties',
+        element: <AdminProperties />,
+      },
+      {
+        path: 'bookings',
+        element: <AdminBookings />,
+      },
+      {
+        path: 'users',
+        element: <AdminUsers />,
+      },
+      {
+        path: 'reviews',
+        element: <AdminReviews />,
+      },
+    ],
+  },
+  {
+    path: '/become-a-host',
+    element: <BecomeAHost />,
+  },
+  {
+    path: '/host/onboarding',
+    element: <BecomeAHost />,
+  },
   {
     path: '/',
     element: <Layout />,
