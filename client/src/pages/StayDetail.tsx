@@ -26,6 +26,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { formatPrice } from '@/lib/utils';
 import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { LocationMap } from '@/components/common/LocationMap';
 import { DateRangePicker } from '@/components/home/DateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
@@ -418,20 +419,20 @@ export const StayDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* Location Map Placeholder */}
+            {/* Location Map */}
             <div id="location" className="pb-8">
               <h3 className="text-lg font-bold text-ink-950 dark:text-white mb-3">Where you'll be</h3>
               <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mb-4">
                 {stay.location.area}, {stay.location.city}, {stay.location.country}
               </p>
-              <div className="h-64 rounded-3xl overflow-hidden glass-panel border border-warm-200/80 dark:border-white/10 relative flex items-center justify-center">
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-sunset-gradient flex items-center justify-center text-white mx-auto shadow-glow-sunset">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div className="text-xs font-bold">{stay.location.city}</div>
-                  <div className="text-[11px] text-ink-400">{stay.location.distanceDesc}</div>
-                </div>
+              <div className="h-64 rounded-3xl overflow-hidden glass-panel border border-warm-200/80 dark:border-white/10 relative">
+                <LocationMap
+                  lat={stay.location.lat}
+                  lng={stay.location.lng}
+                  city={stay.location.city}
+                  area={stay.location.area}
+                  distanceDesc={stay.location.distanceDesc}
+                />
               </div>
             </div>
           </div>
