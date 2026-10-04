@@ -15,11 +15,13 @@ interface PropertyItem {
   monthlyBookings: number;
   status: 'Published' | 'Pending Approval' | 'Draft' | 'Archived';
   image: string;
+  photosCount?: number;
   bedrooms: number;
   bathrooms: number;
   maxGuests: number;
   beds: number;
   submittedTime: string;
+  amenities?: string[];
 }
 
 const INITIAL_PROPERTIES: PropertyItem[] = [
@@ -162,6 +164,12 @@ export const AdminProperties: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectFeedback, setRejectFeedback] = useState(
+    'Sorry, we could not publish your property at this time. Please upload higher resolution photos and clarify check-in procedures.'
+  );
+  const [isSubmittingReject, setIsSubmittingReject] = useState(false);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -174,22 +182,24 @@ export const AdminProperties: React.FC = () => {
         const mapped: PropertyItem[] = res.data.map((l: any) => ({
           id: l._id,
           name: l.title,
-          category: l.category?.[0] ? `${l.category[0].toUpperCase()} Villa` : 'Luxury Villa',
+          category: l.category?.[0] ? `${l.category[0].toUpperCase()} Villa` : (l.propertyType || 'Villa'),
           hostName: l.host?.name || 'Verified Host',
           isSuperhost: l.host?.isSuperhost || false,
           city: l.location?.city || 'India',
           state: l.location?.state || 'India',
-          pricePerNight: l.price?.perNight || 25000,
-          rating: l.rating?.average || 4.9,
-          reviewsCount: l.rating?.count || 12,
-          monthlyBookings: l.bookingStats?.count || 4,
+          pricePerNight: typeof l.price === 'number' ? l.price : (l.price?.perNight || 0),
+          rating: typeof l.rating?.average === 'number' && l.rating.average > 0 ? l.rating.average : (l.rating?.count > 0 ? 5.0 : 0),
+          reviewsCount: l.rating?.count || 0,
+          monthlyBookings: l.bookingStats?.count || 0,
           status: l.status || 'Published',
           image: l.images?.[0] || 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80',
-          bedrooms: l.bedrooms || 3,
-          bathrooms: l.bathrooms || 3,
-          maxGuests: l.maxGuests || 6,
-          beds: l.beds || 3,
-          submittedTime: l.createdAt ? new Date(l.createdAt).toLocaleDateString() : 'Active',
+          photosCount: Array.isArray(l.images) ? l.images.length : 1,
+          bedrooms: l.bedrooms || 1,
+          bathrooms: l.bathrooms || 1,
+          maxGuests: l.maxGuests || 2,
+          beds: l.beds || 1,
+          submittedTime: l.createdAt ? new Date(l.createdAt).toLocaleDateString() : 'Recent',
+          amenities: l.amenities || [],
         }));
         setProperties(mapped);
         if (mapped.length > 0 && !selectedProperty) {
@@ -231,16 +241,40 @@ export const AdminProperties: React.FC = () => {
     }
   };
 
-  const handleRejectProperty = async (id: string) => {
+  const handleOpenRejectModal = () => {
+    if (!selectedProperty) return;
+    setRejectFeedback(
+      `Sorry, we couldn't publish "${selectedProperty.name}" at this time. To meet Wayfound's architectural and quality standards, please provide clearer photos and verify host documentation.`
+    );
+    setIsRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedProperty) return;
+    setIsSubmittingReject(true);
     try {
-      await adminApi.updatePropertyStatus(id, { status: 'Draft' });
+      await adminApi.updatePropertyStatus(selectedProperty.id, {
+        status: 'Draft',
+        reviewFeedback: rejectFeedback.trim(),
+        rejectionReason: rejectFeedback.trim(),
+      });
+
       setProperties((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status: 'Draft' } : item))
+        prev.map((item) =>
+          item.id === selectedProperty.id ? { ...item, status: 'Draft' } : item
+        )
       );
+
+      // Trigger event so host navbar notification updates if active in same browser
+      window.dispatchEvent(new Event('wayfound_property_status_changed'));
+
+      setIsRejectModalOpen(false);
       setDrawerOpen(false);
-      showToast(`Property ${id} returned to draft.`);
+      showToast(`Property returned to draft & feedback notification sent to ${selectedProperty.hostName}.`);
     } catch (err: any) {
       showToast(`Error: ${err?.message || 'Could not update property'}`);
+    } finally {
+      setIsSubmittingReject(false);
     }
   };
 
@@ -545,13 +579,19 @@ export const AdminProperties: React.FC = () => {
                   </td>
 
                   <td className="px-4 py-3.5 text-center">
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/5">
-                      <span className="material-symbols-outlined text-[14px] text-amber-500 fill-current">
-                        star
+                    {p.reviewsCount > 0 ? (
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/5">
+                        <span className="material-symbols-outlined text-[14px] text-amber-500 fill-current">
+                          star
+                        </span>
+                        <span className="font-bold">{p.rating}</span>
+                        <span className="text-[10px] text-[#555f6f]">({p.reviewsCount})</span>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-warm-100 dark:bg-white/5 text-[11px] font-semibold text-ink-600 dark:text-warm-300">
+                        New
                       </span>
-                      <span className="font-bold">{p.rating}</span>
-                      <span className="text-[10px] text-[#555f6f]">({p.reviewsCount})</span>
-                    </div>
+                    )}
                   </td>
 
                   <td className="px-4 py-3.5 text-center font-bold">{p.monthlyBookings}</td>
@@ -663,7 +703,7 @@ export const AdminProperties: React.FC = () => {
                 </div>
                 <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-black/70 backdrop-blur-md text-white text-[11px] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">photo_library</span>
-                  <span>18 Photos</span>
+                  <span>{selectedProperty.photosCount || 1} {(selectedProperty.photosCount || 1) === 1 ? 'Photo' : 'Photos'}</span>
                 </div>
               </div>
 
@@ -690,7 +730,7 @@ export const AdminProperties: React.FC = () => {
                     <span className="material-symbols-outlined text-[#006a61] text-[18px]">verified</span>
                   </div>
                   <p className="text-xs">
-                    Verified Host • {selectedProperty.rating}★ ({selectedProperty.reviewsCount} reviews)
+                    Verified Host • {selectedProperty.reviewsCount > 0 ? `${selectedProperty.rating}★ (${selectedProperty.reviewsCount} reviews)` : 'New Property (0 reviews)'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -738,6 +778,25 @@ export const AdminProperties: React.FC = () => {
                 </div>
               </div>
 
+              {/* Dynamic Amenities */}
+              {selectedProperty.amenities && selectedProperty.amenities.length > 0 && (
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider font-bold block mb-2">
+                    Key Features & Amenities
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedProperty.amenities.map((amenity, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/10 text-[11px] font-medium text-slate-800 dark:text-slate-200"
+                      >
+                        {amenity}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Verification Audit Checklist */}
               <div className="p-4 rounded-xl bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/5 flex flex-col gap-2">
                 <span className="text-[10px] uppercase tracking-wider font-bold">
@@ -780,7 +839,7 @@ export const AdminProperties: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleRejectProperty(selectedProperty.id)}
+                  onClick={handleOpenRejectModal}
                   className="flex-1 h-11 rounded-xl bg-[#f0f3ff] dark:bg-white/5 hover:bg-[#ffdad6]/40 text-[#ba1a1a] text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-[#e2e8f8]/60 dark:border-white/5"
                 >
                   <span className="material-symbols-outlined text-[18px]">cancel</span>
@@ -790,6 +849,84 @@ export const AdminProperties: React.FC = () => {
             </div>
           </aside>
         </>
+      )}
+
+      {/* Rejection Feedback Dialog Modal */}
+      {isRejectModalOpen && selectedProperty && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !isSubmittingReject && setIsRejectModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#171826] border border-rose-500/20 rounded-3xl shadow-2xl overflow-hidden z-10 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#e2e8f8] dark:border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">feedback</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#151c27] dark:text-white">
+                    Reject & Send Feedback
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Host: <span className="font-semibold text-slate-900 dark:text-white">{selectedProperty.hostName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRejectModalOpen(false)}
+                disabled={isSubmittingReject}
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Feedback & Rejection Reason for Host
+              </label>
+              <textarea
+                value={rejectFeedback}
+                onChange={(e) => setRejectFeedback(e.target.value)}
+                rows={4}
+                placeholder="Explain clearly to the host why the listing cannot be published and what needs to be improved..."
+                className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 resize-none leading-relaxed"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                This message will immediately appear in <strong>{selectedProperty.hostName}'s</strong> notifications inbox and the property will be set to Draft.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRejectModalOpen(false)}
+                disabled={isSubmittingReject}
+                className="px-4 py-2 rounded-full border border-slate-300 dark:border-white/15 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReject}
+                disabled={isSubmittingReject || !rejectFeedback.trim()}
+                className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md disabled:opacity-50 transition-all flex items-center gap-1.5"
+              >
+                {isSubmittingReject ? (
+                  <span>Sending Feedback...</span>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">send</span>
+                    <span>Confirm & Send Notification</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

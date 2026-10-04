@@ -84,6 +84,8 @@ export interface IListing {
   houseRules: string[];
   cancellationPolicy: string;
   status: 'Published' | 'Pending Approval' | 'Draft' | 'Archived';
+  rejectionReason?: string;
+  reviewFeedback?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -249,6 +251,14 @@ const ListingSchema = new Schema<IListing>(
       enum: ['Published', 'Pending Approval', 'Draft', 'Archived'],
       default: 'Pending Approval',
       index: true,
+    },
+    rejectionReason: {
+      type: String,
+      default: '',
+    },
+    reviewFeedback: {
+      type: String,
+      default: '',
     },
   },
   {

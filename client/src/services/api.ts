@@ -293,6 +293,10 @@ export const listingsApi = {
     });
   },
 
+  async getMyListings(): Promise<{ success: boolean; data: any[] }> {
+    return apiRequest<{ success: boolean; data: any[] }>('/listings/my-listings');
+  },
+
   async updateListing(id: string, payload: any): Promise<{ success: boolean; data: any }> {
     return apiRequest<{ success: boolean; data: any }>(`/listings/${id}`, {
       method: 'PUT',
@@ -549,6 +553,12 @@ export const adminApi = {
     });
   },
 
+  async deleteBooking(id: string): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/admin/bookings/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async getProperties(params?: {
     search?: string;
     category?: string;
@@ -579,7 +589,12 @@ export const adminApi = {
 
   async updatePropertyStatus(
     id: string,
-    updates: { status?: string; guestFavorite?: boolean }
+    updates: {
+      status?: string;
+      guestFavorite?: boolean;
+      reviewFeedback?: string;
+      rejectionReason?: string;
+    }
   ): Promise<{ success: boolean; message: string; data: any }> {
     return apiRequest(`/admin/properties/${id}/status`, {
       method: 'PATCH',

@@ -284,6 +284,37 @@ export const getTrendingListings = async (_req: Request, res: Response, next: Ne
   }
 };
 
+// @desc    Get current host's listings (including drafts, pending, rejected)
+// @route   GET /api/listings/my-listings
+// @access  Private (Host/User)
+export const getMyHostListings = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    // Find host profile for this user
+    const host = await Host.findOne({ userId: user._id });
+    if (!host) {
+      res.status(200).json({
+        success: true,
+        data: [],
+      });
+      return;
+    }
+
+    const listings = await Listing.find({ hostId: host._id }).sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: listings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create new listing
 // @route   POST /api/listings
 // @access  Private (Host/Admin)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '@/services/api';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface UserDirectoryItem {
   id: string;
@@ -335,11 +336,7 @@ export const AdminUsers: React.FC = () => {
                 <tr key={u.id} className="hover:bg-[#f0f3ff]/50 dark:hover:bg-white/5 transition-colors">
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={u.avatar}
-                        alt={u.name}
-                        className="w-10 h-10 rounded-full object-cover ring-1 ring-black/5 flex-shrink-0"
-                      />
+                      <UserAvatar name={u.name} size="md" className="flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 font-bold">
                           <span className="truncate">{u.name}</span>

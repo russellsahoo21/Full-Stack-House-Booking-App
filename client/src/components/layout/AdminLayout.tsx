@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { adminApi } from '@/services/api';
+import {
+  AdminNotificationsDropdown,
+  AdminNotification,
+} from '@/components/admin/AdminNotificationsDropdown';
 
 export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -11,7 +17,179 @@ export const AdminLayout: React.FC = () => {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Initial base notifications if none stored in localStorage
+  const DEFAULT_NOTIFICATIONS: AdminNotification[] = [
+    {
+      id: 'notif-1',
+      title: 'Cancellation Payout Pending',
+      description: 'Reservation WF-10284 has been marked for guest cancellation refund.',
+      timestamp: '10m ago',
+      type: 'refund',
+      unread: false,
+      link: '/admin/bookings',
+    },
+    {
+      id: 'notif-2',
+      title: 'Reservation Verified',
+      description: 'Mohini Poojary captured booking for The Marwar Organic Farm.',
+      timestamp: '25m ago',
+      type: 'booking',
+      unread: false,
+      link: '/admin/bookings',
+    },
+    {
+      id: 'notif-3',
+      title: 'Review Awaiting Audit',
+      description: 'New 5-star review submitted for The Cliff Sanctuary.',
+      timestamp: '1h ago',
+      type: 'review',
+      unread: false,
+      link: '/admin/reviews',
+    },
+  ];
+
+  // Persistent notifications state initialized from localStorage
+  const [notifications, setNotifications] = useState<AdminNotification[]>(() => {
+    try {
+      const stored = localStorage.getItem('wayfound_admin_notifications');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+    return DEFAULT_NOTIFICATIONS;
+  });
+
+  // Track IDs that the admin has already marked as read
+  const [readIds, setReadIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('wayfound_admin_read_ids');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return ['notif-1', 'notif-2', 'notif-3'];
+  });
+
+  // Keep localStorage synced whenever notifications or read status change
+  useEffect(() => {
+    try {
+      localStorage.setItem('wayfound_admin_notifications', JSON.stringify(notifications));
+      localStorage.setItem('wayfound_admin_read_ids', JSON.stringify(readIds));
+    } catch {}
+  }, [notifications, readIds]);
+
+  // Load live pending bookings and cancellations into notifications feed
+  useEffect(() => {
+    const loadDynamicAlerts = async () => {
+      try {
+        const res = await adminApi.getBookings();
+        if (res?.success && Array.isArray(res.data)) {
+          // Read current readIds directly from localStorage to ensure freshness across page reloads
+          let storedReadIds: string[] = [];
+          try {
+            const raw = localStorage.getItem('wayfound_admin_read_ids');
+            if (raw) storedReadIds = JSON.parse(raw);
+          } catch {}
+
+          const dynamicAlerts: AdminNotification[] = [];
+
+          // 1. Pending bookings needing review
+          const pending = res.data.filter((b: any) => b.status === 'pending');
+          pending.forEach((b: any) => {
+            const id = `notif-pending-${b._id}`;
+            dynamicAlerts.push({
+              id,
+              title: 'Pending Reservation Review',
+              description: `${b.guestInfo?.name || 'Guest'} requested reservation for ${b.listing?.title || 'property'}.`,
+              timestamp: 'Action required',
+              type: 'booking',
+              unread: !storedReadIds.includes(id),
+              link: '/admin/bookings',
+            });
+          });
+
+          // 2. All cancelled bookings (regardless of whether refund status is refunded, processing, or pending)
+          const cancelled = res.data.filter((b: any) => b.status === 'cancelled');
+          cancelled.forEach((b: any) => {
+            const id = `notif-cancelled-${b._id}`;
+            const guestName = b.guestInfo?.name || 'Guest';
+            const shortId = b._id ? b._id.slice(-6).toUpperCase() : '';
+            const isRefunded = b.paymentStatus === 'refunded';
+            dynamicAlerts.push({
+              id,
+              title: 'Trip Cancelled by Guest',
+              description: `${guestName} cancelled reservation WF-${shortId}.${isRefunded ? ' Refund initiated.' : ' Action payout review.'}`,
+              timestamp: 'Recent',
+              type: 'refund',
+              unread: !storedReadIds.includes(id),
+              link: '/admin/bookings',
+            });
+          });
+
+          if (dynamicAlerts.length > 0) {
+            setNotifications((prev) => {
+              // Combine existing non-dynamic alerts or preserve order
+              const alertsMap = new Map<string, AdminNotification>();
+              // Put new dynamic alerts first
+              dynamicAlerts.forEach((a) => {
+                // If it already existed in state, preserve its current unread status unless in storedReadIds
+                alertsMap.set(a.id, {
+                  ...a,
+                  unread: storedReadIds.includes(a.id) ? false : a.unread,
+                });
+              });
+              // Then add other existing alerts that are not duplicates
+              prev.forEach((p) => {
+                if (!alertsMap.has(p.id)) {
+                  alertsMap.set(p.id, {
+                    ...p,
+                    unread: storedReadIds.includes(p.id) ? false : p.unread,
+                  });
+                }
+              });
+              return Array.from(alertsMap.values());
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Could not poll admin notifications:', err);
+      }
+    };
+    loadDynamicAlerts();
+  }, []);
+
+  const handleToggleNotifications = () => {
+    const nextState = !notificationsOpen;
+    setNotificationsOpen(nextState);
+    // When opening the dropdown, mark all current alerts as viewed/read so red badge disappears
+    if (nextState) {
+      handleMarkAllRead();
+    }
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, unread: false }));
+      const allIds = updated.map((n) => n.id);
+      setReadIds((old) => Array.from(new Set([...old, ...allIds])));
+      return updated;
+    });
+  };
+
+  const handleNotificationClick = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
+    );
+    setReadIds((old) => Array.from(new Set([...old, id])));
+  };
+
+  const handleClearNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setReadIds((old) => Array.from(new Set([...old, id])));
+  };
+
+  const unreadAlertsCount = notifications.filter((n) => n.unread).length;
 
   // Determine current page title from pathname
   const getPageTitle = () => {
@@ -138,13 +316,10 @@ export const AdminLayout: React.FC = () => {
         {/* Sidebar Footer User Card */}
         <div className="p-3 m-3 bg-[#f0f3ff] dark:bg-white/5 rounded-2xl flex items-center justify-between border border-[#e2e8f8]/60 dark:border-white/5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              alt="Profile"
-              className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white/50"
-              src={
-                user?.avatar ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-              }
+            <UserAvatar
+              name={user?.name || 'Administrator'}
+              size="sm"
+              className="w-9 h-9 flex-shrink-0 ring-2 ring-white/50"
             />
             {!sidebarCollapsed && (
               <div className="min-w-0">
@@ -220,17 +395,31 @@ export const AdminLayout: React.FC = () => {
               </span>
             </div>
 
-            {/* Notification Bell */}
-            <button
-              aria-label="Notifications"
-              className="relative p-2 rounded-xl text-[#555f6f] dark:text-gray-300 hover:text-[#151c27] dark:hover:text-white hover:bg-[#f0f3ff] dark:hover:bg-white/5 transition-colors"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-[22px]">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b52603] text-white text-[10px] leading-none flex items-center justify-center rounded-full font-bold">
-                3
-              </span>
-            </button>
+            {/* Notification Bell & Dropdown */}
+            <div className="relative">
+              <button
+                aria-label="Notifications"
+                onClick={handleToggleNotifications}
+                className="relative p-2 rounded-xl text-[#555f6f] dark:text-gray-300 hover:text-[#151c27] dark:hover:text-white hover:bg-[#f0f3ff] dark:hover:bg-white/5 transition-colors"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[22px]">notifications</span>
+                {unreadAlertsCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b52603] text-white text-[10px] leading-none flex items-center justify-center rounded-full font-bold animate-pulse">
+                    {unreadAlertsCount}
+                  </span>
+                )}
+              </button>
+
+              <AdminNotificationsDropdown
+                notifications={notifications}
+                isOpen={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+                onMarkAllAsRead={handleMarkAllRead}
+                onNotificationClick={handleNotificationClick}
+                onClearNotification={handleClearNotification}
+              />
+            </div>
 
             {/* Theme Toggle */}
             <button
@@ -249,14 +438,12 @@ export const AdminLayout: React.FC = () => {
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 className="flex items-center gap-1.5 pl-1 py-1 rounded-xl hover:bg-[#f0f3ff] dark:hover:bg-white/5 transition-colors"
+                aria-label="Admin Profile Menu"
               >
-                <img
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-[#e2e8f8] dark:ring-white/10"
-                  src={
-                    user?.avatar ||
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-                  }
+                <UserAvatar
+                  name={user?.name || 'Admin'}
+                  size="sm"
+                  className="w-8 h-8 ring-2 ring-[#e2e8f8] dark:ring-white/10"
                 />
                 <span className="material-symbols-outlined text-[#555f6f] text-[18px]">
                   arrow_drop_down

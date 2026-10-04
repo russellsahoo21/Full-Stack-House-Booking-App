@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { listingsApi } from '@/services/api';
+import { LocationPicker } from '@/components/common/LocationPicker';
 import {
   Home,
   Building,
@@ -102,7 +103,7 @@ const SAMPLE_PHOTO_PRESETS = [
 
 export const BecomeAHost: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
   // Wizard state: Steps 1 to 10
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -224,6 +225,8 @@ export const BecomeAHost: React.FC = () => {
       const res = await listingsApi.createListing(payload);
       if (res.success || res.data) {
         setIsSuccess(true);
+        // Refresh the user session so the user immediately gets the 'host' role and badge
+        await refreshUser().catch((e) => console.warn('Could not refresh user role:', e));
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to submit listing. Please ensure you are logged in.');
@@ -453,7 +456,7 @@ export const BecomeAHost: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 4: LOCATION (INDIAN DESTINATIONS) */}
+            {/* STEP 4: LOCATION (INTERACTIVE MAP & PINPOINT) */}
             {currentStep === 4 && (
               <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300">
                 <div className="text-center space-y-2">
@@ -461,34 +464,28 @@ export const BecomeAHost: React.FC = () => {
                     Where's your place located?
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Your address will only be shared with guests after their reservation is confirmed.
+                    Pinpoint your exact location on the map so guests can accurately discover your neighborhood.
                   </p>
                 </div>
 
-                {/* Quick Indian destination presets */}
-                <div className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Popular Destinations in India
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {POPULAR_DESTINATIONS.map((dest) => (
-                      <button
-                        key={dest.city}
-                        type="button"
-                        onClick={() => handleSelectDestination(dest)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
-                          city === dest.city
-                            ? 'bg-sunset-gradient text-white border-transparent shadow-sm'
-                            : 'border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        {dest.city}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Interactive Leaflet Map Pinpoint Picker */}
+                <LocationPicker
+                  lat={lat}
+                  lng={lng}
+                  city={city}
+                  state={state}
+                  area={area}
+                  onChange={(update) => {
+                    setLat(update.lat);
+                    setLng(update.lng);
+                    if (update.city) setCity(update.city);
+                    if (update.state) setState(update.state);
+                    if (update.area) setArea(update.area);
+                  }}
+                />
 
-                <div className="space-y-4 pt-2">
+                {/* Fine-tune Address Fields */}
+                <div className="space-y-4 pt-1">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-500">City</label>
@@ -497,7 +494,7 @@ export const BecomeAHost: React.FC = () => {
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white"
-                        placeholder="e.g. Goa"
+                        placeholder="e.g. Coorg"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -507,21 +504,21 @@ export const BecomeAHost: React.FC = () => {
                         value={state}
                         onChange={(e) => setState(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white"
-                        placeholder="e.g. Goa"
+                        placeholder="e.g. Karnataka"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Neighborhood / Area
+                      Neighborhood / Area / Street
                     </label>
                     <input
                       type="text"
                       value={area}
                       onChange={(e) => setArea(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white"
-                      placeholder="e.g. Assagao, North Goa"
+                      placeholder="e.g. Madikeri Hills"
                     />
                   </div>
                 </div>

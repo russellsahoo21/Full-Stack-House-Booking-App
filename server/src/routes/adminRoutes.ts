@@ -5,6 +5,7 @@ import {
   getAdminDashboardStats,
   getAdminBookings,
   updateBookingStatus,
+  deleteBooking,
   getAdminProperties,
   updatePropertyStatus,
   deleteProperty,
@@ -34,6 +35,7 @@ router.get('/profile', getAdminProfile);
 // 2. Bookings
 router.get('/bookings', getAdminBookings);
 router.patch('/bookings/:id/status', updateBookingStatus);
+router.delete('/bookings/:id', deleteBooking);
 
 // 3. Properties / Listings
 router.get('/properties', getAdminProperties);

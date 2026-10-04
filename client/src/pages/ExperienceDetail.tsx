@@ -23,6 +23,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
@@ -511,11 +512,7 @@ export const ExperienceDetail: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <img
-                          src={rev.avatar}
-                          alt={rev.author}
-                          className="w-10 h-10 rounded-full object-cover ring-1 ring-warm-300"
-                        />
+                        <UserAvatar name={rev.author} size="md" />
                         <div>
                           <h4 className="text-xs font-bold text-ink-900 dark:text-white">
                             {rev.author}

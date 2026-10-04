@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '@/services/api';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface ReviewItem {
   id: string;
@@ -175,11 +176,7 @@ export const AdminReviews: React.FC = () => {
             className="rounded-2xl bg-white dark:bg-[#171826] p-5 shadow-sm border border-[#e2e8f8] dark:border-white/10 flex flex-col md:flex-row md:items-start justify-between gap-4"
           >
             <div className="flex items-start gap-4">
-              <img
-                src={r.guestAvatar}
-                alt={r.guestName}
-                className="w-10 h-10 rounded-full object-cover ring-1 ring-black/5 flex-shrink-0"
-              />
+              <UserAvatar name={r.guestName} size="md" className="flex-shrink-0" />
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-sm text-[#151c27] dark:text-white">{r.guestName}</h3>

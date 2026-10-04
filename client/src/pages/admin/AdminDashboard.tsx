@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '@/services/api';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface BookingRecord {
   id: string;
@@ -123,6 +124,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const kpis = dashboardData?.kpis;
+  const revenueVelocity = dashboardData?.revenueVelocity;
   const displayBookings: BookingRecord[] =
     dashboardData?.recentBookings && dashboardData.recentBookings.length > 0
       ? dashboardData.recentBookings
@@ -361,89 +363,178 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#b52603]"></span>
-                  <span className="font-semibold text-[#151c27] dark:text-white">October 2026</span>
+                  <span className="font-semibold text-[#151c27] dark:text-white">
+                    {revenueVelocity?.currentMonthName || 'Current Cycle'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-1.5 rounded-full bg-slate-300 dark:bg-gray-600"></span>
-                  <span className="text-[#555f6f] dark:text-gray-400">September 2026</span>
+                  <span className="text-[#555f6f] dark:text-gray-400">
+                    {revenueVelocity?.previousMonthName || 'Previous Benchmark'}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#f0f3ff] dark:bg-white/5 text-xs shadow-sm border border-[#e2e8f8]/60 dark:border-white/5">
                 <span className="w-2 h-2 rounded-full bg-[#b52603]"></span>
-                <span className="text-[#151c27] dark:text-white">Oct 24 Peak:</span>
-                <span className="font-bold text-[#b52603] text-sm">₹1,14,200</span>
+                <span className="text-[#151c27] dark:text-white">{revenueVelocity?.peakDate || 'Peak'}:</span>
+                <span className="font-bold text-[#b52603] text-sm">
+                  ₹{(revenueVelocity?.peakAmount || 114200).toLocaleString('en-IN')}
+                </span>
                 <span className="text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-bold">
                   +16% YoY
                 </span>
               </div>
             </div>
 
-            {/* High-Precision SVG Chart */}
+            {/* Dynamic High-Precision SVG Chart */}
             <div className="relative w-full h-[220px] pt-4">
-              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 740 200">
-                <defs>
-                  <linearGradient id="areaGradientPrimary" x1="0" x2="0" y1="0" y2="200" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#b52603" stopOpacity="0.18"></stop>
-                    <stop offset="85%" stopColor="#b52603" stopOpacity="0.0"></stop>
-                  </linearGradient>
-                </defs>
-                {/* Horizontal Reference Gridlines */}
-                <line x1="40" x2="730" y1="20" y2="20" stroke="currentColor" className="text-gray-100 dark:text-gray-800" strokeWidth="1.5"></line>
-                <text x="5" y="24" className="text-[11px] fill-gray-400">₹1.4L</text>
-                <line x1="40" x2="730" y1="65" y2="65" stroke="currentColor" className="text-gray-100 dark:text-gray-800" strokeWidth="1.5"></line>
-                <text x="5" y="69" className="text-[11px] fill-gray-400">₹1.0L</text>
-                <line x1="40" x2="730" y1="110" y2="110" stroke="currentColor" className="text-gray-100 dark:text-gray-800" strokeWidth="1.5"></line>
-                <text x="5" y="114" className="text-[11px] fill-gray-400">₹0.6L</text>
-                <line x1="40" x2="730" y1="155" y2="155" stroke="currentColor" className="text-gray-100 dark:text-gray-800" strokeWidth="1.5"></line>
-                <text x="5" y="159" className="text-[11px] fill-gray-400">₹0.2L</text>
+              {(() => {
+                const chartLabels: string[] = revenueVelocity?.labels?.length ? revenueVelocity.labels : ['Oct 01', 'Oct 06', 'Oct 11', 'Oct 16', 'Oct 21', 'Oct 26', 'Oct 31'];
+                const currentActuals: number[] = revenueVelocity?.currentCycle?.length ? revenueVelocity.currentCycle : [25000, 48000, 70000, 95000, 114200, 92000, 105000];
+                const benchmarkPrevious: number[] = revenueVelocity?.previousCycle?.length ? revenueVelocity.previousCycle : [20000, 38000, 58000, 78000, 95000, 75000, 88000];
+                const maxVal = Math.max(...currentActuals, ...benchmarkPrevious, 100000);
 
-                {/* September Benchmark (Dashed) */}
-                <path
-                  d="M 40 140 C 90 145, 130 130, 180 115 C 230 100, 270 120, 330 90 C 390 60, 440 95, 500 80 C 560 65, 620 50, 680 75 L 730 65"
-                  fill="none"
-                  opacity="0.85"
-                  stroke="#bdc7d9"
-                  strokeDasharray="4 4"
-                  strokeWidth="2"
-                ></path>
+                const generateSvgPath = (points: number[]) => {
+                  if (!points || points.length === 0) return { line: '', area: '', peakCoord: [640, 18] };
+                  const w = 690; // x from 40 to 730
+                  const h = 155; // y from 25 to 180
+                  const len = Math.max(1, points.length - 1);
 
-                {/* October Actuals Area Fill */}
-                <path
-                  d="M 40 125 C 90 130, 130 95, 180 80 C 230 65, 270 85, 330 55 C 390 25, 440 70, 500 45 C 560 20, 600 30, 640 18 C 670 10, 700 35, 730 25 L 730 185 L 40 185 Z"
-                  fill="url(#areaGradientPrimary)"
-                ></path>
+                  const coords = points.map((p, idx) => {
+                    const x = 40 + (idx / len) * w;
+                    const y = 185 - (p / maxVal) * h;
+                    return [x, y];
+                  });
 
-                {/* October Actuals Stroke */}
-                <path
-                  d="M 40 125 C 90 130, 130 95, 180 80 C 230 65, 270 85, 330 55 C 390 25, 440 70, 500 45 C 560 20, 600 30, 640 18 C 670 10, 700 35, 730 25"
-                  fill="none"
-                  stroke="#b52603"
-                  strokeLinecap="round"
-                  strokeWidth="3"
-                ></path>
+                  let line = `M ${coords[0][0].toFixed(1)} ${coords[0][1].toFixed(1)}`;
+                  for (let i = 1; i < coords.length; i++) {
+                    const prev = coords[i - 1];
+                    const curr = coords[i];
+                    const cp1x = prev[0] + (curr[0] - prev[0]) / 2;
+                    const cp1y = prev[1];
+                    const cp2x = prev[0] + (curr[0] - prev[0]) / 2;
+                    const cp2y = curr[1];
+                    line += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${curr[0].toFixed(1)} ${curr[1].toFixed(1)}`;
+                  }
 
-                {/* Highlight marker for Peak Date (Oct 24) */}
-                <line x1="640" x2="640" y1="18" y2="185" opacity="0.6" stroke="#b52603" strokeDasharray="2 3" strokeWidth="1.5"></line>
-                <circle cx="640" cy="18" fill="#b52603" r="6" stroke="#ffffff" strokeWidth="2.5"></circle>
-              </svg>
+                  const lastX = coords[coords.length - 1][0].toFixed(1);
+                  const area = `${line} L ${lastX} 185 L 40 185 Z`;
+
+                  let maxIdx = 0;
+                  let maxP = points[0];
+                  points.forEach((p, idx) => {
+                    if (p > maxP) {
+                      maxP = p;
+                      maxIdx = idx;
+                    }
+                  });
+
+                  return { line, area, peakCoord: coords[maxIdx] || [640, 18] };
+                };
+
+                const actualPath = generateSvgPath(currentActuals);
+                const prevPath = generateSvgPath(benchmarkPrevious);
+
+                const yLevels = [
+                  { label: `₹${(maxVal / 100000).toFixed(1)}L`, y: 20 },
+                  { label: `₹${((maxVal * 0.72) / 100000).toFixed(1)}L`, y: 65 },
+                  { label: `₹${((maxVal * 0.44) / 100000).toFixed(1)}L`, y: 110 },
+                  { label: `₹${((maxVal * 0.16) / 100000).toFixed(1)}L`, y: 155 },
+                ];
+
+                return (
+                  <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 740 200">
+                    <defs>
+                      <linearGradient id="areaGradientPrimary" x1="0" x2="0" y1="0" y2="200" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#b52603" stopOpacity="0.22"></stop>
+                        <stop offset="85%" stopColor="#b52603" stopOpacity="0.0"></stop>
+                      </linearGradient>
+                    </defs>
+
+                    {/* Horizontal Reference Gridlines */}
+                    {yLevels.map((lvl, idx) => (
+                      <React.Fragment key={idx}>
+                        <line x1="40" x2="730" y1={lvl.y} y2={lvl.y} stroke="currentColor" className="text-gray-100 dark:text-gray-800" strokeWidth="1.5"></line>
+                        <text x="5" y={lvl.y + 4} className="text-[11px] fill-gray-400">{lvl.label}</text>
+                      </React.Fragment>
+                    ))}
+
+                    {/* Benchmark Previous Cycle (Dashed) */}
+                    {prevPath.line && (
+                      <path
+                        d={prevPath.line}
+                        fill="none"
+                        opacity="0.85"
+                        stroke="#bdc7d9"
+                        strokeDasharray="4 4"
+                        strokeWidth="2"
+                      ></path>
+                    )}
+
+                    {/* Current Actuals Area Fill */}
+                    {actualPath.area && (
+                      <path
+                        d={actualPath.area}
+                        fill="url(#areaGradientPrimary)"
+                      ></path>
+                    )}
+
+                    {/* Current Actuals Stroke */}
+                    {actualPath.line && (
+                      <path
+                        d={actualPath.line}
+                        fill="none"
+                        stroke="#b52603"
+                        strokeLinecap="round"
+                        strokeWidth="3"
+                      ></path>
+                    )}
+
+                    {/* Dynamic Highlight marker for Peak Date */}
+                    {actualPath.peakCoord && (
+                      <>
+                        <line
+                          x1={actualPath.peakCoord[0]}
+                          x2={actualPath.peakCoord[0]}
+                          y1={actualPath.peakCoord[1]}
+                          y2="185"
+                          opacity="0.6"
+                          stroke="#b52603"
+                          strokeDasharray="2 3"
+                          strokeWidth="1.5"
+                        ></line>
+                        <circle
+                          cx={actualPath.peakCoord[0]}
+                          cy={actualPath.peakCoord[1]}
+                          fill="#b52603"
+                          r="6"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                        ></circle>
+                      </>
+                    )}
+                  </svg>
+                );
+              })()}
             </div>
 
-            {/* X-Axis Labels */}
+            {/* Dynamic X-Axis Labels */}
             <div className="flex justify-between pl-10 pr-2 pt-2 text-[#555f6f] dark:text-gray-400 text-[11px]">
-              <span>Oct 01</span>
-              <span>Oct 06</span>
-              <span>Oct 11</span>
-              <span>Oct 16</span>
-              <span>Oct 21</span>
-              <span className="text-[#b52603] font-bold">Oct 26</span>
-              <span>Oct 31</span>
+              {(revenueVelocity?.labels?.length ? revenueVelocity.labels : ['Oct 01', 'Oct 06', 'Oct 11', 'Oct 16', 'Oct 21', 'Oct 26', 'Oct 31']).map((lbl: string, idx: number, arr: string[]) => (
+                <span
+                  key={idx}
+                  className={idx === arr.length - 1 || idx === Math.floor(arr.length / 2) ? 'text-[#b52603] font-bold' : ''}
+                >
+                  {lbl}
+                </span>
+              ))}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-[#e2e8f8]/60 dark:border-white/5 flex items-center justify-between text-xs text-[#555f6f] dark:text-gray-400">
             <span>
-              Projected monthly close: <strong className="text-[#151c27] dark:text-white font-semibold">₹27,10,000</strong>
+              Projected monthly close: <strong className="text-[#151c27] dark:text-white font-semibold">₹{(revenueVelocity?.projectedMonthlyClose || 2710000).toLocaleString('en-IN')}</strong>
             </span>
             <Link
               to="/admin/bookings"
@@ -454,7 +545,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Booking Breakdown & Occupancy Gauge (4 cols) */}
+        {/* Dynamic Booking Breakdown & Occupancy Gauge (4 cols) */}
         <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-[#171826] p-6 shadow-sm border border-[#e2e8f8] dark:border-white/10 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -462,7 +553,9 @@ export const AdminDashboard: React.FC = () => {
                 <h2 className="font-display text-lg font-bold text-[#151c27] dark:text-white">
                   Velocity & Health
                 </h2>
-                <p className="text-xs text-[#555f6f] dark:text-gray-400">Distribution across 1,248 stays</p>
+                <p className="text-xs text-[#555f6f] dark:text-gray-400">
+                  Distribution across {kpis?.curatedInventory || 12} stays
+                </p>
               </div>
               <button className="p-1 rounded-lg text-[#555f6f] dark:text-gray-400 hover:bg-[#f0f3ff] dark:hover:bg-white/5 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">info</span>
@@ -470,98 +563,116 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Radial Occupancy Gauge */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#f0f3ff] dark:bg-white/5 mb-4 border border-[#e2e8f8]/60 dark:border-white/5">
-              <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
-                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-[#dce2f3] dark:text-gray-700"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3.5"
-                  ></path>
-                  <path
-                    className="text-[#b52603]"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeDasharray="78.4, 100"
-                    strokeLinecap="round"
-                    strokeWidth="3.5"
-                  ></path>
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-base font-bold text-[#151c27] dark:text-white leading-none">
-                    78%
-                  </span>
-                </div>
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] uppercase tracking-wide text-[#555f6f] dark:text-gray-400 font-bold">
-                  Average Occupancy
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-xl font-bold text-[#151c27] dark:text-white">78.4%</span>
-                  <span className="text-emerald-700 dark:text-emerald-400 text-xs font-bold">+4.2%</span>
-                </div>
-                <p className="text-xs text-[#555f6f] dark:text-gray-400 truncate mt-0.5">
-                  Goa & Udaipur villas at 92% capacity
-                </p>
-              </div>
-            </div>
+            {(() => {
+              const occ = kpis?.occupancyPercentage != null ? kpis.occupancyPercentage : 78.4;
+              const confirmedCount = kpis?.confirmedCount ?? 932;
+              const pendingCount = kpis?.pendingCount ?? 222;
+              const cancelledCount = kpis?.cancelledCount ?? 94;
+              const totalAllocations = Math.max(1, confirmedCount + pendingCount + cancelledCount);
 
-            {/* Stacked Velocity Breakdown Bar */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span className="text-[#151c27] dark:text-white">Status Allocation</span>
-                <span className="text-[#555f6f] dark:text-gray-400">1,248 Stays Total</span>
-              </div>
+              const confirmedPct = ((confirmedCount / totalAllocations) * 100).toFixed(1);
+              const pendingPct = ((pendingCount / totalAllocations) * 100).toFixed(1);
+              const cancelledPct = ((cancelledCount / totalAllocations) * 100).toFixed(1);
 
-              <div className="w-full h-3 rounded-full bg-[#e7eefe] dark:bg-white/10 overflow-hidden flex">
-                <div className="h-full bg-[#b52603]" style={{ width: '74.6%' }} title="Confirmed: 932"></div>
-                <div className="h-full bg-amber-500" style={{ width: '17.8%' }} title="Pending: 222"></div>
-                <div className="h-full bg-slate-400" style={{ width: '7.6%' }} title="Cancelled: 94"></div>
-              </div>
+              return (
+                <>
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#f0f3ff] dark:bg-white/5 mb-4 border border-[#e2e8f8]/60 dark:border-white/5">
+                    <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                      <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-[#dce2f3] dark:text-gray-700"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                        ></path>
+                        <path
+                          className="text-[#b52603]"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeDasharray={`${occ}, 100`}
+                          strokeLinecap="round"
+                          strokeWidth="3.5"
+                        ></path>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-base font-bold text-[#151c27] dark:text-white leading-none">
+                          {Math.round(occ)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] uppercase tracking-wide text-[#555f6f] dark:text-gray-400 font-bold">
+                        Average Occupancy
+                      </span>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-xl font-bold text-[#151c27] dark:text-white">{occ}%</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 text-xs font-bold">+4.2%</span>
+                      </div>
+                      <p className="text-xs text-[#555f6f] dark:text-gray-400 truncate mt-0.5">
+                        Curated Indian villas operating at high demand
+                      </p>
+                    </div>
+                  </div>
 
-              {/* Legend rows */}
-              <div className="pt-2 space-y-2 text-xs">
-                <div className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#b52603]"></span>
-                    <span className="text-[#151c27] dark:text-white">Confirmed & Paid</span>
+                  {/* Dynamic Stacked Velocity Breakdown Bar */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span className="text-[#151c27] dark:text-white">Status Allocation</span>
+                      <span className="text-[#555f6f] dark:text-gray-400">{totalAllocations} Bookings Total</span>
+                    </div>
+
+                    <div className="w-full h-3 rounded-full bg-[#e7eefe] dark:bg-white/10 overflow-hidden flex">
+                      <div className="h-full bg-[#b52603]" style={{ width: `${confirmedPct}%` }} title={`Confirmed: ${confirmedCount}`}></div>
+                      <div className="h-full bg-amber-500" style={{ width: `${pendingPct}%` }} title={`Pending: ${pendingCount}`}></div>
+                      <div className="h-full bg-slate-400" style={{ width: `${cancelledPct}%` }} title={`Cancelled: ${cancelledCount}`}></div>
+                    </div>
+
+                    {/* Dynamic Legend rows */}
+                    <div className="pt-2 space-y-2 text-xs">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#b52603]"></span>
+                          <span className="text-[#151c27] dark:text-white">Confirmed & Paid</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-[#151c27] dark:text-white">{confirmedCount}</span>
+                          <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">{confirmedPct}%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                          <span className="text-[#151c27] dark:text-white">Pending Verification</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-[#151c27] dark:text-white">{pendingCount}</span>
+                          <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">{pendingPct}%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                          <span className="text-[#151c27] dark:text-white">Cancelled / Voided</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-[#151c27] dark:text-white">{cancelledCount}</span>
+                          <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">{cancelledPct}%</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-[#151c27] dark:text-white">932</span>
-                    <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">74.6%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    <span className="text-[#151c27] dark:text-white">Pending Verification</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-[#151c27] dark:text-white">222</span>
-                    <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">17.8%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                    <span className="text-[#151c27] dark:text-white">Cancelled / Voided</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-[#151c27] dark:text-white">94</span>
-                    <span className="text-[#555f6f] dark:text-gray-400 w-10 text-right">7.6%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                </>
+              );
+            })()}
           </div>
 
           <div className="mt-4 pt-3 bg-[#f0f3ff] dark:bg-white/5 rounded-xl p-3 flex items-center justify-between border border-[#e2e8f8]/60 dark:border-white/5">
             <span className="text-xs text-[#555f6f] dark:text-gray-400">Host payout run scheduled</span>
-            <button className="text-xs text-[#b52603] font-bold hover:underline">Review (₹8.4L)</button>
+            <Link to="/admin/bookings" className="text-xs text-[#b52603] font-bold hover:underline">
+              Review (₹{kpis?.hostPayout ? (kpis.hostPayout / 100000).toFixed(1) : '8.4'}L)
+            </Link>
           </div>
         </div>
       </div>
@@ -624,9 +735,7 @@ export const AdminDashboard: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-[#b52603]/10 text-[#b52603] font-bold text-xs flex items-center justify-center flex-shrink-0">
-                            {b.avatarInitials}
-                          </div>
+                          <UserAvatar name={b.guestName} size="sm" />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#151c27] dark:text-white truncate">
                               {b.guestName}
@@ -710,9 +819,7 @@ export const AdminDashboard: React.FC = () => {
                 {/* Column 1: Guest Dossier */}
                 <div className="p-4 rounded-xl bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/5">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-[#b52603]/10 text-[#b52603] font-bold text-sm flex items-center justify-center flex-shrink-0">
-                      {selectedBooking.avatarInitials}
-                    </div>
+                    <UserAvatar name={selectedBooking.guestName} size="md" />
                     <div className="min-w-0">
                       <p className="font-bold text-sm text-[#151c27] dark:text-white truncate">
                         {selectedBooking.guestName}
@@ -835,83 +942,129 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Activity Items */}
+            {/* Dynamic Activity Items from live database telemetry */}
             <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-[#f0f3ff] dark:before:bg-white/5 before:h-full">
-              {/* Event 1 */}
-              <div className="relative flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-[#b52603] text-white flex items-center justify-center flex-shrink-0 z-10 shadow-sm">
-                  <span className="material-symbols-outlined text-[15px]">villa</span>
-                </div>
-                <div className="flex-1 min-w-0 bg-[#f0f3ff] dark:bg-white/5 p-3 rounded-xl border border-[#e2e8f8]/60 dark:border-white/5">
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-[11px] text-[#b52603] font-bold">New Inventory</span>
-                    <span className="text-[10px] text-[#555f6f] dark:text-gray-400">12m ago</span>
-                  </div>
-                  <p className="text-xs text-[#151c27] dark:text-white">
-                    <strong>Palm Grove Estate</strong>, Alibaug submitted by Kabir Singhania
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Link
-                      to="/admin/properties"
-                      className="px-2.5 py-1 rounded bg-[#b52603] text-white text-[10px] font-bold hover:bg-[#8c1900] transition-colors"
-                    >
-                      Review Listing
-                    </Link>
-                    <span className="text-[10px] text-[#555f6f] dark:text-gray-400">5 BHK · Sea View</span>
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const getRelativeTime = (timestamp?: string | Date) => {
+                  if (!timestamp) return 'just now';
+                  const now = new Date();
+                  const past = new Date(timestamp);
+                  const diffSec = Math.max(0, Math.floor((now.getTime() - past.getTime()) / 1000));
+                  if (diffSec < 60) return 'just now';
+                  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+                  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+                  return `${Math.floor(diffSec / 86400)}d ago`;
+                };
 
-              {/* Event 2 */}
-              <div className="relative flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-[#006a61] text-white flex items-center justify-center flex-shrink-0 z-10 shadow-sm">
-                  <span className="material-symbols-outlined text-[15px]">check_circle</span>
-                </div>
-                <div className="flex-1 min-w-0 bg-[#f0f3ff] dark:bg-white/5 p-3 rounded-xl border border-[#e2e8f8]/60 dark:border-white/5">
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-[11px] text-[#006a61] font-bold">Confirmed Stay</span>
-                    <span className="text-[10px] text-[#555f6f] dark:text-gray-400">28m ago</span>
-                  </div>
-                  <p className="text-xs text-[#151c27] dark:text-white">
-                    Booking confirmed: <strong className="text-[#b52603]">WF-10284</strong> by Aarav Mehta
-                  </p>
-                  <p className="text-[11px] text-[#555f6f] dark:text-gray-400 mt-0.5">
-                    Casa Verde Retreat, Lonavala
-                  </p>
-                </div>
-              </div>
+                const activities: any[] =
+                  dashboardData?.liveActivities?.length > 0
+                    ? dashboardData.liveActivities
+                    : [
+                        {
+                          id: 'def-1',
+                          type: 'listing',
+                          title: 'New Inventory Curated',
+                          description: 'Luxury Villa in Assagao, Goa added to catalog',
+                          timestamp: new Date(),
+                          meta: '4 BHK · Villa',
+                          link: '/admin/properties',
+                        },
+                        {
+                          id: 'def-2',
+                          type: 'booking',
+                          title: 'Confirmed Stay',
+                          description: 'Reservation confirmed for Guest Traveler',
+                          timestamp: new Date(Date.now() - 25 * 60 * 1000),
+                          meta: 'Paid',
+                          link: '/admin/bookings',
+                        },
+                        {
+                          id: 'def-3',
+                          type: 'host',
+                          title: 'Host Onboarded',
+                          description: 'Host verified and listed initial inventory portfolio',
+                          timestamp: new Date(Date.now() - 90 * 60 * 1000),
+                          meta: 'Curated Host',
+                          link: '/admin/users',
+                        },
+                      ];
 
-              {/* Event 3 */}
-              <div className="relative flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-[#d6e0f3] text-[#121c2a] flex items-center justify-center flex-shrink-0 z-10 shadow-sm">
-                  <span className="material-symbols-outlined text-[15px]">verified_user</span>
-                </div>
-                <div className="flex-1 min-w-0 bg-[#f0f3ff] dark:bg-white/5 p-3 rounded-xl border border-[#e2e8f8]/60 dark:border-white/5">
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-[11px] text-[#121c2a] dark:text-gray-200 font-bold">
-                      Host Verified
-                    </span>
-                    <span className="text-[10px] text-[#555f6f] dark:text-gray-400">1h ago</span>
-                  </div>
-                  <p className="text-xs text-[#151c27] dark:text-white">
-                    Superhost badge awarded: <strong>Priya Sharma</strong>, Jaipur
-                  </p>
-                  <span className="inline-block mt-1 text-[10px] font-semibold text-[#006a61]">
-                    3 Havelis in Portfolio
-                  </span>
-                </div>
-              </div>
+                return activities.slice(0, 4).map((act, idx) => {
+                  const isListing = act.type === 'listing';
+                  const isBooking = act.type === 'booking';
+
+                  return (
+                    <div key={act.id || idx} className="relative flex items-start gap-3">
+                      <div
+                        className={`w-7 h-7 rounded-full text-white flex items-center justify-center flex-shrink-0 z-10 shadow-sm ${
+                          isListing
+                            ? 'bg-[#b52603]'
+                            : isBooking
+                            ? 'bg-[#006a61]'
+                            : 'bg-indigo-600'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[15px]">
+                          {isListing ? 'villa' : isBooking ? 'check_circle' : 'verified_user'}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0 bg-[#f0f3ff] dark:bg-white/5 p-3 rounded-xl border border-[#e2e8f8]/60 dark:border-white/5">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span
+                            className={`text-[11px] font-bold ${
+                              isListing
+                                ? 'text-[#b52603]'
+                                : isBooking
+                                ? 'text-[#006a61]'
+                                : 'text-indigo-600 dark:text-indigo-400'
+                            }`}
+                          >
+                            {act.title}
+                          </span>
+                          <span className="text-[10px] text-[#555f6f] dark:text-gray-400">
+                            {getRelativeTime(act.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#151c27] dark:text-white leading-snug">
+                          {act.description}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          {act.link ? (
+                            <Link
+                              to={act.link}
+                              className={`px-2.5 py-1 rounded text-white text-[10px] font-bold transition-colors ${
+                                isListing ? 'bg-[#b52603] hover:bg-[#8c1900]' : 'bg-[#006a61] hover:bg-[#00514a]'
+                              }`}
+                            >
+                              {act.isPending ? 'Review Listing' : 'View Details'}
+                            </Link>
+                          ) : (
+                            <span />
+                          )}
+                          {act.meta && (
+                            <span className="text-[10px] text-[#555f6f] dark:text-gray-400 font-semibold">
+                              {act.meta}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
 
           <div className="mt-4 pt-3 bg-[#f0f3ff] dark:bg-white/5 p-3 rounded-xl flex items-center justify-between border border-[#e2e8f8]/60 dark:border-white/5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="text-xs text-[#151c27] dark:text-white font-medium">
-                All Core Services Operational
+                {dashboardData?.systemHealth?.services || 'All Core Services Operational'}
               </span>
             </div>
-            <span className="text-[11px] text-[#555f6f] dark:text-gray-400">Razorpay · AWS Mumbai</span>
+            <span className="text-[11px] text-[#555f6f] dark:text-gray-400">
+              {dashboardData?.systemHealth?.gateway || 'Razorpay · AWS Mumbai'}
+            </span>
           </div>
         </div>
       </div>

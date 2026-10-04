@@ -20,6 +20,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Curated aesthetic avatar presets
@@ -170,15 +171,8 @@ export const Profile: React.FC = () => {
       {/* Header Banner */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl glass-panel border border-warm-200/80 dark:border-white/10 shadow-lg">
         <div className="flex items-center gap-5">
-          <div className="relative group">
-            <img
-              src={avatar || user.avatar || AVATAR_PRESETS[0]}
-              alt={user.name}
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-white dark:ring-ink-800 shadow-md"
-            />
-            <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
-              <Camera className="w-5 h-5" />
-            </div>
+          <div className="relative">
+            <UserAvatar name={user.name} size="2xl" className="ring-4 ring-white dark:ring-ink-800 shadow-md" />
           </div>
 
           <div>
@@ -187,7 +181,7 @@ export const Profile: React.FC = () => {
                 {user.name}
               </h1>
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-sunset-gradient text-white shadow-sm">
-                {user.role === 'admin' ? 'Administrator' : user.role === 'host' ? 'Superhost' : 'Member'}
+                {user.role === 'admin' ? 'Administrator' : user.role === 'host' ? 'Host' : 'Member'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mt-1 flex items-center gap-1.5">

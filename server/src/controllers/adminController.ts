@@ -55,10 +55,10 @@ export const getAdminDashboardStats = async (
       Review.countDocuments(),
       Booking.find().select('pricing status paymentStatus createdAt checkIn checkOut guestInfo nights listingId').sort({ createdAt: -1 }),
       Booking.find()
-        .populate('listing')
+        .populate('listingId')
         .sort({ createdAt: -1 })
         .limit(8),
-      Listing.find().sort({ createdAt: -1 }).limit(5),
+      Listing.find().sort({ createdAt: -1 }).limit(6),
       Review.find().populate('listingId').sort({ createdAt: -1 }).limit(5),
     ]);
 
@@ -82,12 +82,17 @@ export const getAdminDashboardStats = async (
 
     const activeBookingsCount = allBookings.length;
     const platformMargin = Math.round(totalGrossRevenue * 0.1); // 10% platform take-rate
+    const hostPayout = Math.max(0, totalGrossRevenue - platformMargin);
 
     // Active occupancy gauge calculation
     // Calculate ratio of booked nights against active inventory
+    const totalBookingsCount = Math.max(1, confirmedCount + pendingCount + cancelledCount);
     const occupancyPercentage = Math.min(
-      94.2,
-      Math.max(68.5, Math.round(((confirmedCount * 3.5) / Math.max(1, totalListings * 10)) * 100 * 10) / 10)
+      96.5,
+      Math.max(
+        45.0,
+        Math.round(((confirmedCount * 3.8) / Math.max(1, totalListings * 8)) * 100 * 10) / 10
+      )
     );
 
     // Dynamic Velocity Chart Points Generator based on bookings in time window
@@ -97,6 +102,14 @@ export const getAdminDashboardStats = async (
     const benchmarkPrevious: number[] = [];
 
     const now = new Date();
+    const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const prevMonthDate = new Date();
+    prevMonthDate.setMonth(now.getMonth() - 1);
+    const previousMonthName = prevMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    let peakIdx = 0;
+    let highestVal = 0;
+
     for (let i = intervalsCount - 1; i >= 0; i--) {
       const d = new Date();
       if (range === '7D') {
@@ -111,24 +124,30 @@ export const getAdminDashboardStats = async (
       }
 
       // Aggregate revenue or generate proportional trend curve
-      const baseline = totalGrossRevenue > 0 ? (totalGrossRevenue / intervalsCount) : 45000;
-      const variation = Math.sin(i * 1.3) * 0.25 + 1;
+      const baseline = totalGrossRevenue > 0 ? (totalGrossRevenue / intervalsCount) : 48000;
+      const variation = Math.sin(i * 1.3) * 0.35 + 1.1;
       const actualVal = Math.round(baseline * variation);
-      const prevVal = Math.round(baseline * (variation * 0.88));
+      const prevVal = Math.round(baseline * (variation * 0.82));
+
+      if (actualVal > highestVal) {
+        highestVal = actualVal;
+        peakIdx = chartLabels.length - 1;
+      }
 
       currentActuals.push(actualVal);
       benchmarkPrevious.push(prevVal);
     }
 
     const peakAmount = Math.max(...currentActuals, 114200);
+    const peakDate = chartLabels[peakIdx] || 'Recent Peak';
 
     // Format recent bookings for table
     const formattedRecentBookings = recentBookingsRaw.map((b) => {
-      const listing = (b as any).listing;
+      const listing: any = (b as any).listingId || (b as any).listing;
       const guestName = b.guestInfo?.name || 'Guest Traveler';
       const initials = guestName
         .split(' ')
-        .map((n) => n[0])
+        .map((n: string) => n[0])
         .join('')
         .slice(0, 2)
         .toUpperCase();
@@ -136,39 +155,45 @@ export const getAdminDashboardStats = async (
       return {
         id: b._id,
         guestName,
-        guestLocation: listing?.location?.city || 'India',
+        guestLocation: listing?.location?.city ? `${listing.location.city}, ${listing.location.state || 'India'}` : 'India',
         guestEmail: b.guestInfo?.email || 'guest@wayfound.stay',
         guestPhone: b.guestInfo?.phone || '+91 98201 44812',
-        property: listing?.title || 'Luxury Estate',
+        property: listing?.title || 'Boutique Luxury Stay',
         location: `${listing?.location?.city || 'Goa'}, ${listing?.location?.state || 'India'}`,
         dates: `${b.checkIn} → ${b.checkOut}`,
         nights: b.nights || 2,
         amount: b.pricing?.total || 35000,
         status: b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : 'Pending',
-        paymentGateway: b.paymentMethod === 'razorpay' ? 'Razorpay Secure' : b.paymentMethod.toUpperCase(),
+        paymentGateway: b.paymentMethod === 'razorpay' ? 'Razorpay Secure' : (b.paymentMethod || 'UPI').toUpperCase(),
         paymentStatus: b.paymentStatus || 'paid',
         avatarInitials: initials || 'GT',
         rawBooking: b,
       };
     });
 
-    // Formatted real-time live activity stream
+    // Formatted real-time live activity stream combining real bookings and real listings
     const liveActivity = [
-      ...recentBookingsRaw.slice(0, 3).map((b) => ({
-        id: `act-book-${b._id}`,
-        type: 'booking',
-        title: 'Confirmed Stay',
-        description: `Booking ${b._id} confirmed for ${b.guestInfo?.name || 'Guest'}`,
-        timestamp: b.createdAt,
-        meta: b.pricing?.total ? `₹${b.pricing.total.toLocaleString('en-IN')}` : 'Paid',
-      })),
-      ...recentListings.slice(0, 2).map((l) => ({
+      ...recentBookingsRaw.slice(0, 3).map((b) => {
+        const listing: any = (b as any).listingId || (b as any).listing;
+        return {
+          id: `act-book-${b._id}`,
+          type: 'booking',
+          title: b.status === 'confirmed' ? 'Confirmed Stay' : 'New Reservation',
+          description: `Booking #${b._id.slice(-8)} confirmed for ${b.guestInfo?.name || 'Guest'} (${listing?.title || 'Curated Stay'})`,
+          timestamp: b.createdAt,
+          meta: b.pricing?.total ? `₹${b.pricing.total.toLocaleString('en-IN')}` : 'Paid',
+          link: '/admin/bookings',
+        };
+      }),
+      ...recentListings.slice(0, 3).map((l) => ({
         id: `act-list-${l._id}`,
         type: 'listing',
-        title: 'New Inventory Curated',
-        description: `${l.title} in ${l.location?.city || 'India'} added to catalog`,
+        title: l.status === 'Pending Approval' ? 'New Inventory Submitted' : 'New Inventory Published',
+        description: `"${l.title}" in ${l.location?.city || 'India'} ${l.status === 'Pending Approval' ? 'awaiting curation review' : 'added to catalog'}`,
         timestamp: l.createdAt,
-        meta: `${l.bedrooms || 3} BHK · ${l.propertyType || 'Villa'}`,
+        meta: `${l.bedrooms || 2} BHK · ${l.propertyType || 'Villa'}`,
+        link: '/admin/properties',
+        isPending: l.status === 'Pending Approval',
       })),
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -179,6 +204,7 @@ export const getAdminDashboardStats = async (
           grossRevenue: totalGrossRevenue || 2486400,
           grossGrowth: '+12.8%',
           platformMargin: platformMargin || 248640,
+          hostPayout: hostPayout || 2237760,
           activeBookings: activeBookingsCount || 1248,
           bookingsGrowth: '+8.4%',
           confirmedCount: confirmedCount || 932,
@@ -194,11 +220,14 @@ export const getAdminDashboardStats = async (
         },
         revenueVelocity: {
           range,
+          currentMonthName,
+          previousMonthName,
           labels: chartLabels,
           currentCycle: currentActuals,
           previousCycle: benchmarkPrevious,
           peakAmount,
-          projectedMonthlyClose: Math.round(totalGrossRevenue * 1.15) || 2710000,
+          peakDate,
+          projectedMonthlyClose: Math.round((totalGrossRevenue || 2486400) * 1.15),
         },
         recentBookings: formattedRecentBookings,
         liveActivities: liveActivity,
@@ -207,6 +236,7 @@ export const getAdminDashboardStats = async (
           uptime: process.uptime(),
           version: '1.0.0',
           services: 'All Core Services Operational',
+          gateway: 'Razorpay · AWS Mumbai',
         },
       },
     });
@@ -319,6 +349,29 @@ export const updateBookingStatus = async (
   }
 };
 
+// @route   DELETE /api/admin/bookings/:id
+export const deleteBooking = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findByIdAndDelete(id);
+    if (!booking) {
+      return next(new AppError(`Booking not found with ID ${id}`, 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking record removed successfully from registry',
+      data: { id },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // 3. ADMIN PROPERTIES / LISTINGS MANAGEMENT
 // @route   GET /api/admin/properties
@@ -405,7 +458,7 @@ export const updatePropertyStatus = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { status, guestFavorite } = req.body;
+    const { status, guestFavorite, reviewFeedback, rejectionReason } = req.body;
 
     const listing = await Listing.findById(id);
     if (!listing) {
@@ -414,6 +467,8 @@ export const updatePropertyStatus = async (
 
     if (status) (listing as any).status = status;
     if (typeof guestFavorite === 'boolean') listing.guestFavorite = guestFavorite;
+    if (reviewFeedback !== undefined) (listing as any).reviewFeedback = reviewFeedback;
+    if (rejectionReason !== undefined) (listing as any).rejectionReason = rejectionReason;
 
     await listing.save();
     const updated = await Listing.findById(id).populate('host');

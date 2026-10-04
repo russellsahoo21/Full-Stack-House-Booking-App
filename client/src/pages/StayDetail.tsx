@@ -27,6 +27,7 @@ import { formatPrice } from '@/lib/utils';
 import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { LocationMap } from '@/components/common/LocationMap';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { DateRangePicker } from '@/components/home/DateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
@@ -401,11 +402,7 @@ export const StayDetail: React.FC = () => {
                     className="p-5 rounded-2xl glass-panel border border-warm-200/80 dark:border-white/10 space-y-3"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={rev.userAvatar}
-                        alt={rev.userName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
+                      <UserAvatar name={rev.userName} size="md" />
                       <div>
                         <h4 className="font-bold text-xs text-ink-900 dark:text-white">{rev.userName}</h4>
                         <p className="text-[11px] text-ink-400">{rev.date}</p>
@@ -420,20 +417,24 @@ export const StayDetail: React.FC = () => {
             </div>
 
             {/* Location Map */}
-            <div id="location" className="pb-8">
-              <h3 className="text-lg font-bold text-ink-950 dark:text-white mb-3">Where you'll be</h3>
-              <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mb-4">
-                {stay.location.area}, {stay.location.city}, {stay.location.country}
-              </p>
-              <div className="h-64 rounded-3xl overflow-hidden glass-panel border border-warm-200/80 dark:border-white/10 relative">
-                <LocationMap
-                  lat={stay.location.lat}
-                  lng={stay.location.lng}
-                  city={stay.location.city}
-                  area={stay.location.area}
-                  distanceDesc={stay.location.distanceDesc}
-                />
+            <div id="location" className="pb-8 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-ink-950 dark:text-white">Where you'll be</h3>
+                  <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mt-0.5">
+                    {stay.location.area}, {stay.location.city}, {stay.location.country}
+                  </p>
+                </div>
               </div>
+              <LocationMap
+                key={`stay-map-${stay._id}-${stay.location.lat}-${stay.location.lng}`}
+                lat={stay.location.lat}
+                lng={stay.location.lng}
+                city={stay.location.city}
+                area={stay.location.area}
+                distanceDesc={stay.location.distanceDesc}
+                title={stay.title}
+              />
             </div>
           </div>
 

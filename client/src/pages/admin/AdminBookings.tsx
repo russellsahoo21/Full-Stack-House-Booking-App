@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '@/services/api';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface BookingItem {
   id: string;
@@ -195,6 +196,15 @@ export const AdminBookings: React.FC = () => {
     return matchesSearch;
   });
 
+  // Dynamic Metrics derived directly from live database bookings
+  const totalBookingsCount = bookings.length;
+  const confirmedCount = bookings.filter((b) => b.status === 'Confirmed').length;
+  const pendingCount = bookings.filter((b) => b.status === 'Pending Confirmation').length;
+  const cancelledCount = bookings.filter((b) => b.status === 'Cancelled by Guest').length;
+
+  const confirmedPercent = totalBookingsCount > 0 ? ((confirmedCount / totalBookingsCount) * 100).toFixed(1) : '0';
+  const cancelledPercent = totalBookingsCount > 0 ? ((cancelledCount / totalBookingsCount) * 100).toFixed(1) : '0';
+
   const handleConfirmReservation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -228,6 +238,24 @@ export const AdminBookings: React.FC = () => {
       showToast(`Refund of ₹${selectedBooking.amount.toLocaleString('en-IN')} disbursed for ${selectedBooking.id}`);
     } catch (err: any) {
       showToast(`Error: ${err?.message || 'Could not process refund'}`);
+    }
+  };
+
+  const handleDeleteBooking = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to permanently remove reservation ${id} from the records?`)) {
+      return;
+    }
+    try {
+      await adminApi.deleteBooking(id);
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+      if (selectedBooking?.id === id) {
+        setSelectedBooking(null);
+        setDrawerOpen(false);
+      }
+      showToast(`Reservation ${id} permanently removed.`);
+    } catch (err: any) {
+      showToast(`Error: ${err?.message || 'Could not remove reservation'}`);
     }
   };
 
@@ -291,7 +319,9 @@ export const AdminBookings: React.FC = () => {
               <span className="text-[11px] uppercase tracking-wider text-[#555f6f] dark:text-gray-400 font-bold">
                 Total Bookings
               </span>
-              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">1,248</h2>
+              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">
+                {totalBookingsCount.toLocaleString('en-IN')}
+              </h2>
             </div>
             <div className="w-10 h-10 rounded-xl bg-[#ffdad2] text-[#3d0600] flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">villa</span>
@@ -299,9 +329,9 @@ export const AdminBookings: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 mt-3 text-xs">
             <span className="flex items-center text-[#006a61] font-bold">
-              <span className="material-symbols-outlined text-[16px]">arrow_upward</span>8.4%
+              <span className="material-symbols-outlined text-[16px]">arrow_upward</span>Live
             </span>
-            <span className="text-[#555f6f] dark:text-gray-400">MoM volume velocity</span>
+            <span className="text-[#555f6f] dark:text-gray-400">Total ledger records</span>
           </div>
         </div>
 
@@ -312,17 +342,19 @@ export const AdminBookings: React.FC = () => {
               <span className="text-[11px] uppercase tracking-wider text-[#555f6f] dark:text-gray-400 font-bold">
                 Confirmed
               </span>
-              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">932</h2>
+              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">
+                {confirmedCount.toLocaleString('en-IN')}
+              </h2>
             </div>
             <div className="w-10 h-10 rounded-xl bg-[#89f5e7] text-[#00201d] flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">verified</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 mt-3 text-xs">
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-              74.6%
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
+              {confirmedPercent}%
             </span>
-            <span className="text-[#555f6f] dark:text-gray-400">of total capacity</span>
+            <span className="text-[#555f6f] dark:text-gray-400">of total bookings</span>
           </div>
         </div>
 
@@ -333,7 +365,9 @@ export const AdminBookings: React.FC = () => {
               <span className="text-[11px] uppercase tracking-wider text-[#555f6f] dark:text-gray-400 font-bold">
                 Pending Review
               </span>
-              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">186</h2>
+              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">
+                {pendingCount.toLocaleString('en-IN')}
+              </h2>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
@@ -341,7 +375,7 @@ export const AdminBookings: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 mt-3 text-xs text-[#555f6f] dark:text-gray-400">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>Host triage or KYC validation</span>
+            <span>Awaiting confirmation</span>
           </div>
         </div>
 
@@ -352,15 +386,17 @@ export const AdminBookings: React.FC = () => {
               <span className="text-[11px] uppercase tracking-wider text-[#555f6f] dark:text-gray-400 font-bold">
                 Cancelled / Refunded
               </span>
-              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">130</h2>
+              <h2 className="text-2xl font-extrabold text-[#151c27] dark:text-white mt-1">
+                {cancelledCount.toLocaleString('en-IN')}
+              </h2>
             </div>
             <div className="w-10 h-10 rounded-xl bg-[#d6e0f3] text-[#121c2a] flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">assignment_return</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 mt-3 text-xs text-[#555f6f] dark:text-gray-400">
-            <span className="font-bold text-[#151c27] dark:text-white">10.4%</span>
-            <span>Cancellation run rate</span>
+            <span className="font-bold text-[#151c27] dark:text-white">{cancelledPercent}%</span>
+            <span>Cancellation rate</span>
           </div>
         </div>
       </div>
@@ -453,11 +489,7 @@ export const AdminBookings: React.FC = () => {
 
                   <td className="px-4">
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={b.avatar}
-                        alt={b.guestName}
-                        className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5"
-                      />
+                      <UserAvatar name={b.guestName} size="sm" />
                       <div className="min-w-0">
                         <p className="font-semibold text-xs text-[#151c27] dark:text-white truncate">
                           {b.guestName}
@@ -541,7 +573,7 @@ export const AdminBookings: React.FC = () => {
                       >
                         <span className="material-symbols-outlined text-[18px]">visibility</span>
                       </button>
-                      {b.status !== 'Cancelled by Guest' && (
+                      {b.status !== 'Cancelled by Guest' ? (
                         <button
                           onClick={() => {
                             setSelectedBooking(b);
@@ -549,6 +581,14 @@ export const AdminBookings: React.FC = () => {
                           }}
                           className="p-1.5 rounded-lg text-[#ba1a1a] hover:bg-[#ffdad6]/40 transition-colors"
                           title="Cancel & Refund"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => handleDeleteBooking(b.id, e)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:text-white hover:bg-rose-600 transition-colors"
+                          title="Remove Cancelled Reservation"
                         >
                           <span className="material-symbols-outlined text-[18px]">close</span>
                         </button>
@@ -630,11 +670,7 @@ export const AdminBookings: React.FC = () => {
               <div className="rounded-xl bg-[#f0f3ff] dark:bg-white/5 border border-[#e2e8f8]/60 dark:border-white/5 p-4 flex flex-col gap-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={selectedBooking.avatar}
-                      alt={selectedBooking.guestName}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-white/50"
-                    />
+                    <UserAvatar name={selectedBooking.guestName} size="lg" />
                     <div>
                       <div className="flex items-center gap-1.5">
                         <h4 className="font-bold text-sm text-[#151c27] dark:text-white">
@@ -769,24 +805,46 @@ export const AdminBookings: React.FC = () => {
                   <span className="material-symbols-outlined text-[18px]">receipt</span>
                   <span>Tax Invoice</span>
                 </button>
+                {selectedBooking.status !== 'Cancelled by Guest' ? (
+                  <button
+                    type="button"
+                    onClick={() => setRefundModalOpen(true)}
+                    className="h-10 px-4 rounded-xl bg-[#ffdad6] text-[#ba1a1a] text-xs font-bold hover:bg-[#ffb4a3] flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">price_change</span>
+                    <span>Issue Refund</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBooking(selectedBooking.id)}
+                    className="h-10 px-4 rounded-xl bg-rose-100 text-rose-700 text-xs font-bold hover:bg-rose-200 flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
+
+              {selectedBooking.status !== 'Cancelled by Guest' ? (
                 <button
                   type="button"
                   onClick={() => setRefundModalOpen(true)}
-                  className="h-10 px-4 rounded-xl bg-[#ffdad6] text-[#ba1a1a] text-xs font-bold hover:bg-[#ffb4a3] flex items-center justify-center gap-1.5 transition-all"
+                  className="h-10 w-full rounded-xl bg-[#ba1a1a] text-white text-xs font-bold hover:bg-[#8c1900] flex items-center justify-center gap-1.5 shadow-sm transition-all"
                 >
-                  <span className="material-symbols-outlined text-[18px]">price_change</span>
-                  <span>Issue Refund</span>
+                  <span className="material-symbols-outlined text-[18px]">cancel</span>
+                  <span>Cancel Reservation & Authorize Full Refund</span>
                 </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setRefundModalOpen(true)}
-                className="h-10 w-full rounded-xl bg-[#ba1a1a] text-white text-xs font-bold hover:bg-[#8c1900] flex items-center justify-center gap-1.5 shadow-sm transition-all"
-              >
-                <span className="material-symbols-outlined text-[18px]">cancel</span>
-                <span>Cancel Reservation & Authorize Full Refund</span>
-              </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBooking(selectedBooking.id)}
+                  className="h-10 w-full rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                  <span>Permanently Delete Reservation Record</span>
+                </button>
+              )}
             </div>
           </div>
         </>

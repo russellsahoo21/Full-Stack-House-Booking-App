@@ -5,6 +5,7 @@ import {
   getCategories,
   getListingsByVibe,
   getTrendingListings,
+  getMyHostListings,
   createListing,
   updateListing,
   deleteListing,
@@ -17,6 +18,7 @@ router.get('/', getListings);
 router.get('/categories', getCategories);
 router.get('/vibes', getListingsByVibe);
 router.get('/trending', getTrendingListings);
+router.get('/my-listings', protect, getMyHostListings);
 router.get('/:id', getListingById);
 
 router.post('/', protect, authorize('user', 'host', 'admin'), createListing);

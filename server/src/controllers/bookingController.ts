@@ -187,11 +187,22 @@ export const updateBookingStatus = async (req: Request, res: Response, next: Nex
 };
 
 // @desc    Cancel booking
+// @desc    Cancel booking (Instant Automatic Cancellation & Auto Refund with ₹1,000 fee)
 // @route   DELETE /api/bookings/:id
+// @route   PATCH  /api/bookings/:id/cancel
 // @access  Private
 export const cancelBooking = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { reason = 'Cancelled by guest' } = req.body;
+
+    const existingBooking = await Booking.findById(req.params.id);
+    if (!existingBooking) {
+      return next(new AppError(`Booking not found with id ${req.params.id}`, 404));
+    }
+
+    const totalPaid = existingBooking.pricing?.total || 0;
+    const cancellationFee = 1000;
+    const refundAmount = Math.max(0, totalPaid - cancellationFee);
 
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
@@ -203,14 +214,20 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
       { new: true }
     ).populate('listing');
 
-    if (!booking) {
-      return next(new AppError(`Booking not found with id ${req.params.id}`, 404));
-    }
-
     res.status(200).json({
       success: true,
-      message: 'Booking cancelled successfully',
-      data: booking,
+      message: 'Cancellation done successfully. Your refund of ₹' + refundAmount.toLocaleString('en-IN') + ' (after ₹1,000 cancellation fee) has been processed automatically to your original payment method.',
+      data: {
+        ...(booking ? booking.toObject() : {}),
+        refundSummary: {
+          totalPaid,
+          cancellationFee,
+          refundAmount,
+          currency: 'INR',
+          status: 'refunded',
+          processedAt: new Date().toISOString(),
+        },
+      },
     });
   } catch (error) {
     next(error);

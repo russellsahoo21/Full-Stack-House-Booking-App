@@ -86,16 +86,26 @@ export const Trips: React.FC = () => {
       ? completedBookings
       : cancelledBookings;
 
-  // Handle Cancellation
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  // Handle Cancellation (Instant Auto Cancellation & Refund)
   const handleConfirmCancel = async () => {
     if (!cancellingBooking) return;
     try {
       setCancelLoading(true);
       setCancelError(null);
-      await bookingsApi.cancelBooking(cancellingBooking._id, cancelReason);
+      const res = await bookingsApi.cancelBooking(cancellingBooking._id, cancelReason);
+
+      const refundMsg = res?.message || 'Cancellation done successfully. Your refund has been processed automatically with a ₹1,000 cancellation fee.';
+      setSuccessBanner(refundMsg);
+      setTimeout(() => setSuccessBanner(null), 8000);
+
+      // Trigger custom event so Navbar instantly re-fetches user notifications
+      window.dispatchEvent(new Event('wayfound_booking_cancelled'));
 
       // Refresh list
       await loadBookings();
+      setActiveTab('cancelled');
       setCancellingBooking(null);
     } catch (err: any) {
       setCancelError(err?.message || 'Failed to cancel booking. Please try again.');
@@ -217,6 +227,25 @@ export const Trips: React.FC = () => {
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
+
+      {/* Instant Cancellation Success Alert */}
+      {successBanner && (
+        <div className="mb-8 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[22px] text-emerald-600 dark:text-emerald-400">
+              check_circle
+            </span>
+            <span>{successBanner}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessBanner(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Unauthenticated State */}
       {!user ? (
@@ -430,9 +459,30 @@ export const Trips: React.FC = () => {
                         </div>
 
                         {booking.cancellationReason && (
-                          <p className="text-xs text-rose-500 mb-3 italic">
+                          <p className="text-xs text-rose-500 mb-2 italic">
                             Reason: {booking.cancellationReason}
                           </p>
+                        )}
+
+                        {booking.status === 'cancelled' && (
+                          <div className="mb-3 p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="material-symbols-outlined text-[20px] text-emerald-600 dark:text-emerald-400">
+                                check_circle
+                              </span>
+                              <div>
+                                <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200">
+                                  Refund Processed Automatically
+                                </p>
+                                <p className="text-[11px] text-emerald-700/90 dark:text-emerald-300/90 mt-0.5">
+                                  ₹{Math.max(0, pricePaid - 1000).toLocaleString('en-IN')} refunded to your original payment method (₹1,000 cancellation fee applied).
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 shrink-0">
+                              REFUND CREDITED
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -520,9 +570,30 @@ export const Trips: React.FC = () => {
                   Cancel Reservation?
                 </h4>
                 <p className="text-xs text-ink-500 dark:text-warm-400 mt-1">
-                  Are you sure you want to cancel this reservation? A full refund will be initiated to your original payment method.
+                  Cancellation is processed <span className="font-bold text-emerald-600 dark:text-emerald-400">instantly and automatically</span> without waiting for admin approval.
                 </p>
               </div>
+
+              {cancellingBooking && (
+                <div className="p-3.5 rounded-2xl bg-warm-100/70 dark:bg-ink-900/80 border border-warm-200 dark:border-white/10 space-y-2 text-xs">
+                  <div className="flex justify-between text-ink-600 dark:text-warm-400">
+                    <span>Total Paid</span>
+                    <span className="font-bold text-ink-950 dark:text-white">
+                      ₹{(cancellingBooking.pricing?.total || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-rose-500 font-medium">
+                    <span>Cancellation Fee</span>
+                    <span>- ₹1,000</span>
+                  </div>
+                  <div className="pt-2 border-t border-warm-200/60 dark:border-white/10 flex justify-between font-extrabold text-emerald-600 dark:text-emerald-400">
+                    <span>Refund to Original Method</span>
+                    <span>
+                      ₹{Math.max(0, (cancellingBooking.pricing?.total || 0) - 1000).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {cancelError && (
                 <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-xs">
