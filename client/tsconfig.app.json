@@ -23,7 +23,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* TypeScript compatibility */
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src"]
 }
