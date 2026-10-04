@@ -16,6 +16,7 @@ import Services from '@/pages/Services';
 import ServiceDetail from '@/pages/ServiceDetail';
 import Trips from '@/pages/Trips';
 import Profile from '@/pages/Profile';
+import MessagesPage from '@/pages/MessagesPage';
 import NotFound from '@/pages/NotFound';
 
 // Admin Portal Imports
@@ -129,6 +130,14 @@ export const router = createBrowserRouter([
       {
         path: 'bookings',
         element: <Trips />,
+      },
+      {
+        path: 'messages',
+        element: <MessagesPage />,
+      },
+      {
+        path: 'messages/:chatId',
+        element: <MessagesPage />,
       },
       {
         path: '*',

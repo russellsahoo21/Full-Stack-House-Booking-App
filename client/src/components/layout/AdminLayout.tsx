@@ -206,6 +206,7 @@ export const AdminLayout: React.FC = () => {
     { label: 'Dashboard', path: '/admin', icon: 'grid_view', section: 'Overview' },
     { label: 'Properties', path: '/admin/properties', icon: 'villa', section: 'Management' },
     { label: 'Bookings', path: '/admin/bookings', icon: 'calendar_month', section: 'Management' },
+    { label: 'Messages', path: '/messages', icon: 'chat', section: 'Management' },
     { label: 'Users', path: '/admin/users', icon: 'group', section: 'Management' },
     { label: 'Reviews', path: '/admin/reviews', icon: 'hotel_class', section: 'Management' },
   ];

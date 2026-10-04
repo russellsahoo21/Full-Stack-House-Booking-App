@@ -190,6 +190,30 @@ export const getListingById = async (req: Request, res: Response, next: NextFunc
     const listingData: any = listing.toObject();
     listingData.reviews = reviews;
 
+    // Guarantee host profile is always populated from Host or User model
+    if (!listingData.host || !listingData.host.name) {
+      const hostDoc =
+        (await Host.findById(listing.hostId)) ||
+        (await Host.findOne({ userId: listing.hostId }));
+      if (hostDoc) {
+        listingData.host = hostDoc.toObject ? hostDoc.toObject() : hostDoc;
+      } else {
+        const userDoc = await User.findById(listing.hostId);
+        if (userDoc) {
+          listingData.host = {
+            _id: userDoc._id,
+            name: userDoc.name,
+            avatar:
+              userDoc.avatar ||
+              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
+            responseTime: 'within an hour',
+            responseRate: 100,
+            isSuperhost: false,
+          };
+        }
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: listingData,

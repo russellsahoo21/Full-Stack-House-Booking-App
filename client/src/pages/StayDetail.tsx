@@ -21,11 +21,14 @@ import {
   Check,
   ArrowRight,
   Compass,
+  MessageSquare,
 } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 import { formatPrice } from '@/lib/utils';
-import { listingsApi, reviewsApi, bookingsApi } from '@/services/api';
+import { listingsApi, reviewsApi, bookingsApi, messagesApi } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { ContactHostModal } from '@/components/chat/ContactHostModal';
 import { LocationMap } from '@/components/common/LocationMap';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { DateRangePicker } from '@/components/home/DateRangePicker';
@@ -35,6 +38,7 @@ import { format, addDays } from 'date-fns';
 export const StayDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const fallbackStay = mockListings.find((s) => s._id === id) || mockListings[0];
   const fallbackHost = mockHosts[fallbackStay.hostId] || Object.values(mockHosts)[0];
@@ -46,6 +50,35 @@ export const StayDetail: React.FC = () => {
   const [bookedDates, setBookedDates] = useState<string[]>([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isContactHostOpen, setIsContactHostOpen] = useState(false);
+  const [isConnectingChat, setIsConnectingChat] = useState(false);
+
+  // Directly create/find chat and navigate to /messages/:chatId
+  const handleContactHost = async () => {
+    if (!isAuthenticated || !user) {
+      openAuthModal('login');
+      return;
+    }
+
+    setIsConnectingChat(true);
+    try {
+      const res = await messagesApi.getOrCreateConversation({
+        listingId: stay._id,
+        hostId: (host as any)?.userId || (host as any)?._id || (stay as any)?.hostId,
+      });
+
+      if (res?.success && res.data) {
+        navigate(`/messages/${res.data._id}`);
+      } else {
+        navigate('/messages');
+      }
+    } catch (err) {
+      console.warn('Could not initialize conversation:', err);
+      navigate('/messages');
+    } finally {
+      setIsConnectingChat(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -55,7 +88,9 @@ export const StayDetail: React.FC = () => {
       .then((res) => {
         if (isMounted && res?.data) {
           setStay(res.data);
-          if (res.data.hostId && typeof res.data.hostId === 'object') {
+          if (res.data.host && typeof res.data.host === 'object') {
+            setHost(res.data.host);
+          } else if (res.data.hostId && typeof res.data.hostId === 'object') {
             setHost(res.data.hostId);
           }
         }
@@ -289,20 +324,35 @@ export const StayDetail: React.FC = () => {
           {/* LEFT COLUMN: STAY INFORMATION */}
           <div className="lg:col-span-8 space-y-10">
             {/* Host info banner */}
-            <div className="flex items-center justify-between pb-8 border-b border-warm-200/60 dark:border-white/10">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-ink-950 dark:text-white">
-                  {stay.roomType} hosted by {host.name}
-                </h2>
-                <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mt-1">
-                  {stay.maxGuests} guests · {stay.bedrooms} bedrooms · {stay.beds} beds · {stay.bathrooms} baths
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 border-b border-warm-200/60 dark:border-white/10">
+              <div className="flex items-center gap-4">
+                <img
+                  src={host.avatar}
+                  alt={host.name}
+                  className="w-14 h-14 rounded-full object-cover ring-2 ring-sunset-coral/40 shrink-0"
+                />
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-ink-950 dark:text-white">
+                    {stay.roomType} hosted by {host.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-ink-500 dark:text-warm-400 mt-0.5">
+                    {stay.maxGuests} guests · {stay.bedrooms} bedrooms · {stay.beds} beds · {stay.bathrooms} baths
+                  </p>
+                </div>
               </div>
-              <img
-                src={host.avatar}
-                alt={host.name}
-                className="w-14 h-14 rounded-full object-cover ring-2 ring-sunset-coral/40 shrink-0"
-              />
+              <button
+                type="button"
+                onClick={handleContactHost}
+                disabled={isConnectingChat}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-warm-100 hover:bg-warm-200/80 dark:bg-ink-800 dark:hover:bg-ink-700/80 text-ink-900 dark:text-white text-xs font-bold transition-all border border-warm-200/80 dark:border-white/10 shadow-sm hover:scale-105 active:scale-95 shrink-0 self-start sm:self-center disabled:opacity-50"
+              >
+                {isConnectingChat ? (
+                  <div className="w-4 h-4 border-2 border-sunset-coral/30 border-t-sunset-coral rounded-full animate-spin" />
+                ) : (
+                  <MessageSquare className="w-4 h-4 text-sunset-coral" />
+                )}
+                <span>Contact Host</span>
+              </button>
             </div>
 
             {/* Highlights */}
@@ -583,6 +633,21 @@ export const StayDetail: React.FC = () => {
                 Reserve stay
               </button>
 
+              {/* Ask Host a Question Button */}
+              <button
+                type="button"
+                onClick={handleContactHost}
+                disabled={isConnectingChat}
+                className="w-full py-2.5 rounded-full border border-warm-300 dark:border-white/15 hover:border-sunset-coral hover:bg-warm-50 dark:hover:bg-ink-800/60 text-ink-800 dark:text-warm-200 text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isConnectingChat ? (
+                  <div className="w-3.5 h-3.5 border-2 border-sunset-coral/30 border-t-sunset-coral rounded-full animate-spin" />
+                ) : (
+                  <MessageSquare className="w-3.5 h-3.5 text-sunset-coral" />
+                )}
+                <span>Ask Host a Question</span>
+              </button>
+
               <p className="text-center text-xs text-ink-400">
                 You won't be charged yet
               </p>
@@ -707,6 +772,21 @@ export const StayDetail: React.FC = () => {
         listingImage={stay.images[0]}
         onReviewSubmitted={(newRev) => {
           setReviews((prev) => [newRev, ...prev]);
+        }}
+      />
+
+      {/* Contact Host Inquiry Modal with 6 Topics */}
+      <ContactHostModal
+        isOpen={isContactHostOpen}
+        onClose={() => setIsContactHostOpen(false)}
+        listing={stay}
+        host={host}
+        onOpenChat={(conversationId) => {
+          window.dispatchEvent(
+            new CustomEvent('wayfound_open_messages', {
+              detail: { conversationId },
+            })
+          );
         }}
       />
     </div>

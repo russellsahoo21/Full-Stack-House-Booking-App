@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import app from './app.js';
 import { connectDB } from './config/db.js';
+import { initWebSocketServer } from './socket.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,6 +16,9 @@ const server = app.listen(PORT, () => {
   console.log(`🌿 Health check: http://localhost:${PORT}/api/health`);
   console.log('🌿 ==============================================');
 });
+
+// Initialize WebSocket server
+initWebSocketServer(server);
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: any) => {

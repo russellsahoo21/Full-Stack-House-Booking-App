@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Globe, Menu, User, Search, LogOut, Trash2, Bell } from 'lucide-react';
+import { Globe, Menu, User, Search, LogOut, Trash2, Bell, MessageSquare } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { bookingsApi, listingsApi } from '@/services/api';
+import { bookingsApi, listingsApi, messagesApi } from '@/services/api';
+import { socketService } from '@/services/socket';
+import { MessagesModal } from '@/components/chat/MessagesModal';
 import {
   UserNotificationsModal,
   UserNotification,
@@ -17,6 +19,9 @@ export const Navbar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [isMessagesModalOpen, setIsMessagesModalOpen] = useState(false);
+  const [activeChatConversationId, setActiveChatConversationId] = useState<string | null>(null);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
@@ -211,6 +216,73 @@ export const Navbar: React.FC = () => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // Fetch unread messages count and listen to WebSocket real-time events
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+
+    const refreshUnread = () => {
+      messagesApi
+        .getUnreadCount()
+        .then((res) => {
+          if (res?.success) setUnreadMessagesCount(res.unreadCount);
+        })
+        .catch(() => {});
+    };
+
+    // Initial fetch of unread messages count
+    refreshUnread();
+
+    // Connect user socket
+    socketService.connect(user._id);
+
+    const unsubNotif = socketService.onNotification((notif: any) => {
+      if (notif?.type === 'chat_message') {
+        if (!location.pathname.startsWith('/messages')) {
+          setUnreadMessagesCount((prev) => prev + 1);
+        }
+      }
+    });
+
+    const unsubMsg = socketService.onMessage((payload: any) => {
+      if (payload.type === 'new_message' && payload.message?.senderId !== user._id) {
+        if (!location.pathname.startsWith('/messages')) {
+          setUnreadMessagesCount((prev) => prev + 1);
+        }
+      }
+    });
+
+    const handleOpenMessages = (e: any) => {
+      if (e.detail?.conversationId) {
+        setActiveChatConversationId(e.detail.conversationId);
+      }
+      setIsMessagesModalOpen(true);
+      refreshUnread();
+    };
+
+    const handleMessagesRead = () => {
+      refreshUnread();
+    };
+
+    window.addEventListener('wayfound_open_messages', handleOpenMessages);
+    window.addEventListener('wayfound_messages_read', handleMessagesRead);
+
+    return () => {
+      unsubNotif();
+      unsubMsg();
+      window.removeEventListener('wayfound_open_messages', handleOpenMessages);
+      window.removeEventListener('wayfound_messages_read', handleMessagesRead);
+    };
+  }, [isAuthenticated, user, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/messages')) {
+      window.dispatchEvent(new CustomEvent('wayfound_messages_read'));
+    }
+  }, [location.pathname]);
+
   const isHome = location.pathname === '/';
   const currentTab = location.pathname.startsWith('/experiences')
     ? 'experiences'
@@ -382,8 +454,8 @@ export const Navbar: React.FC = () => {
                 >
                   <div className="relative">
                     <Menu className="w-4 h-4" />
-                    {/* Red dot on three lines menu icon when user has unread notifications */}
-                    {unreadCount > 0 && (
+                    {/* Red dot on three lines menu icon when user has unread notifications or messages */}
+                    {(unreadCount > 0 || unreadMessagesCount > 0) && (
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF5A5F] rounded-full ring-2 ring-white dark:ring-ink-900 animate-pulse" />
                     )}
                   </div>
@@ -430,28 +502,55 @@ export const Navbar: React.FC = () => {
 
                       <div className="py-1">
                         {isAuthenticated && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsProfileMenuOpen(false);
-                              setIsNotificationsModalOpen(true);
-                            }}
-                            className="w-full flex items-center justify-between px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-semibold group text-left"
-                          >
-                            <span className="flex items-center gap-2">
-                              <Bell className="w-4 h-4 text-sunset-coral" />
-                              <span>Notifications</span>
-                            </span>
-                            {unreadCount > 0 ? (
-                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sunset-coral text-white animate-pulse">
-                                {unreadCount} new
+                          <>
+                            {/* Messages Option */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                navigate('/messages');
+                              }}
+                              className="w-full flex items-center justify-between px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-semibold group text-left"
+                            >
+                              <span className="flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-sunset-coral" />
+                                <span>Messages</span>
                               </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200/70 dark:bg-ink-800 text-ink-500 dark:text-warm-400">
-                                {notifications.length}
+                              {unreadMessagesCount > 0 ? (
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sunset-coral text-white animate-pulse">
+                                  {unreadMessagesCount} new
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200/70 dark:bg-ink-800 text-ink-500 dark:text-warm-400">
+                                  Chat
+                                </span>
+                              )}
+                            </button>
+
+                            {/* Notifications Option */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                setIsNotificationsModalOpen(true);
+                              }}
+                              className="w-full flex items-center justify-between px-4 py-2 text-sm text-ink-700 dark:text-warm-200 hover:bg-warm-100 dark:hover:bg-ink-800/60 transition-colors font-semibold group text-left"
+                            >
+                              <span className="flex items-center gap-2">
+                                <Bell className="w-4 h-4 text-sunset-coral" />
+                                <span>Notifications</span>
                               </span>
-                            )}
-                          </button>
+                              {unreadCount > 0 ? (
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sunset-coral text-white animate-pulse">
+                                  {unreadCount} new
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warm-200/70 dark:bg-ink-800 text-ink-500 dark:text-warm-400">
+                                  {notifications.length}
+                                </span>
+                              )}
+                            </button>
+                          </>
                         )}
                         {!isAuthenticated ? (
                           <>
@@ -583,6 +682,17 @@ export const Navbar: React.FC = () => {
         onMarkAllAsRead={handleMarkAllNotificationsRead}
         onNotificationClick={handleNotificationClick}
         onDismiss={handleDismissNotification}
+        onOpenChat={(convId) => {
+          navigate(`/messages/${convId}`);
+        }}
+      />
+
+      {/* Real-Time WebSocket Messages Modal */}
+      <MessagesModal
+        isOpen={isMessagesModalOpen}
+        onClose={() => setIsMessagesModalOpen(false)}
+        initialConversationId={activeChatConversationId}
+        onUnreadChange={(count) => setUnreadMessagesCount(count)}
       />
     </header>
   );

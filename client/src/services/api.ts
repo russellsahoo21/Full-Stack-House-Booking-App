@@ -722,4 +722,101 @@ export const adminApi = {
   },
 };
 
+// ==========================================
+// Messages & Inquiries API
+// ==========================================
+
+export interface MessageItem {
+  _id: string;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  senderRole: 'guest' | 'host' | 'admin';
+  topic?: string;
+  text: string;
+  read: boolean;
+  createdAt: string;
+  sender?: {
+    _id?: string;
+    name: string;
+    avatar?: string;
+    role?: string;
+  };
+}
+
+export interface ConversationItem {
+  _id: string;
+  guestId: string;
+  hostId: string;
+  listingId: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  lastSenderId?: string;
+  unreadGuest: number;
+  unreadHost: number;
+  guest?: {
+    _id: string;
+    name: string;
+    avatar?: string;
+    email?: string;
+  };
+  host?: {
+    _id: string;
+    name: string;
+    avatar?: string;
+    email?: string;
+  };
+  listing?: {
+    _id: string;
+    title: string;
+    images?: string[];
+    price?: { perNight: number };
+    location?: { city: string; area: string };
+    roomType?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const messagesApi = {
+  async getConversations(): Promise<{ success: boolean; data: ConversationItem[] }> {
+    return apiRequest<{ success: boolean; data: ConversationItem[] }>('/messages/conversations');
+  },
+
+  async getOrCreateConversation(payload: {
+    listingId: string;
+    hostId?: string;
+    initialMessage?: string;
+    topic?: string;
+  }): Promise<{ success: boolean; data: ConversationItem }> {
+    return apiRequest<{ success: boolean; data: ConversationItem }>('/messages/conversations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getMessages(conversationId: string): Promise<{ success: boolean; data: MessageItem[] }> {
+    return apiRequest<{ success: boolean; data: MessageItem[] }>(
+      `/messages/conversations/${conversationId}/messages`
+    );
+  },
+
+  async sendMessage(
+    conversationId: string,
+    payload: { text: string; topic?: string }
+  ): Promise<{ success: boolean; data: MessageItem }> {
+    return apiRequest<{ success: boolean; data: MessageItem }>(
+      `/messages/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  async getUnreadCount(): Promise<{ success: boolean; unreadCount: number }> {
+    return apiRequest<{ success: boolean; unreadCount: number }>('/messages/unread-count');
+  },
+};
+
 

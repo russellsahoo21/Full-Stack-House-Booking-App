@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Calendar, Bell, CheckCircle2, Clock, X, AlertTriangle } from 'lucide-react';
+import { Calendar, Bell, CheckCircle2, Clock, X, AlertTriangle, MessageSquare } from 'lucide-react';
 
 export interface UserNotification {
   id: string;
@@ -14,12 +14,14 @@ export interface UserNotification {
     | 'booking_confirmed'
     | 'trip_cancelled'
     | 'property_rejected'
-    | 'property_approved';
+    | 'property_approved'
+    | 'chat_message';
   unread: boolean;
   link?: string;
   tripDate?: string;
   stayTitle?: string;
   feedback?: string;
+  conversationId?: string;
 }
 
 interface UserNotificationsModalProps {
@@ -29,6 +31,7 @@ interface UserNotificationsModalProps {
   onMarkAllAsRead: () => void;
   onNotificationClick: (id: string) => void;
   onDismiss: (id: string) => void;
+  onOpenChat?: (conversationId: string) => void;
 }
 
 export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
@@ -38,6 +41,7 @@ export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
   onMarkAllAsRead,
   onNotificationClick,
   onDismiss,
+  onOpenChat,
 }) => {
   if (!isOpen) return null;
 
@@ -116,11 +120,18 @@ export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
               const isCancelled = item.type === 'trip_cancelled';
               const isRejected = item.type === 'property_rejected';
               const isApproved = item.type === 'property_approved';
+              const isChatMessage = item.type === 'chat_message';
 
               return (
                 <div
                   key={item.id}
-                  onClick={() => onNotificationClick(item.id)}
+                  onClick={() => {
+                    onNotificationClick(item.id);
+                    if (isChatMessage && item.conversationId && onOpenChat) {
+                      onClose();
+                      onOpenChat(item.conversationId);
+                    }
+                  }}
                   className={`p-4 rounded-2xl transition-all cursor-pointer group flex items-start gap-3.5 relative ${
                     item.unread
                       ? 'bg-sunset-gradient-subtle/50 dark:bg-white/[0.04] border border-sunset-coral/20'
@@ -130,14 +141,20 @@ export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
                   {/* Icon badge */}
                   <div
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                      isTomorrow
+                      isChatMessage
+                        ? 'bg-sunset-gradient-subtle text-sunset-coral dark:bg-sunset-coral/20'
+                        : isTomorrow
                         ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
                         : isCancelled || isRejected
                         ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                        : isApproved
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                         : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                     }`}
                   >
-                    {isTomorrow ? (
+                    {isChatMessage ? (
+                      <MessageSquare className="w-5 h-5 text-sunset-coral" />
+                    ) : isTomorrow ? (
                       <Clock className="w-5 h-5" />
                     ) : isCancelled || isRejected ? (
                       <AlertTriangle className="w-5 h-5" />
@@ -169,7 +186,20 @@ export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
                       {item.description}
                     </p>
 
-                    {item.link && (
+                    {isChatMessage && item.conversationId ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClose();
+                          if (onOpenChat) onOpenChat(item.conversationId!);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-sunset-coral hover:underline"
+                      >
+                        <span>Open Chat</span>
+                        <span>&rarr;</span>
+                      </button>
+                    ) : item.link ? (
                       <Link
                         to={item.link}
                         onClick={(e) => {
@@ -181,7 +211,7 @@ export const UserNotificationsModal: React.FC<UserNotificationsModalProps> = ({
                         <span>{isRejected || isApproved ? 'View Property' : 'View Trip Details'}</span>
                         <span>&rarr;</span>
                       </Link>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Dismiss */}
